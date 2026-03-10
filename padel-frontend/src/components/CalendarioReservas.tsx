@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createReservation, getAvailability } from "../api/api";
+import { createReservation, getAvailability } from "../lib/apiClient";
 
 type Slot = {
   time: string;

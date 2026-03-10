@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { loginUser } from "../api/api";
+import { loginUser } from "../lib/apiClient";
 
 export default function LoginPadex() {
   const [email, setEmail] = useState("");
