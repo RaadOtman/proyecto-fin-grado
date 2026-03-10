@@ -1,60 +1,96 @@
 // src/lib/apiClient.ts
 import { API_BASE_URL } from "../config/api";
 
+function getToken() {
+  return localStorage.getItem("padel_token");
+}
+
+async function readJson(res: Response) {
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data?.error || `HTTP ${res.status}`);
+  }
+
+  return data;
+}
+
+// -------- PUBLIC --------
+
 export async function getAvailability(date: string) {
   const res = await fetch(`${API_BASE_URL}/availability?date=${date}`);
-  if (!res.ok) {
-    throw new Error(`Error al obtener disponibilidad: ${res.status}`);
-  }
-  return res.json();
+  return readJson(res);
 }
 
 export async function getCourts() {
   const res = await fetch(`${API_BASE_URL}/courts`);
-  if (!res.ok) {
-    throw new Error(`Error al obtener pistas: ${res.status}`);
-  }
-  return res.json();
+  return readJson(res);
 }
 
-// NUEVO: obtener reservas (puedes pasar fecha opcional)
-export async function getReservations(date?: string) {
-  const url = date
-    ? `${API_BASE_URL}/reservations?date=${encodeURIComponent(date)}`
-    : `${API_BASE_URL}/reservations`;
+// -------- AUTH --------
 
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Error al obtener reservas: ${res.status}`);
-  }
-  return res.json();
-}
-export async function cancelReservation(id: number) {
-  const res = await fetch(`${API_BASE_URL}/reservations/${id}`, {
-    method: "DELETE",
-  });
-
-  if (!res.ok) {
-    throw new Error(`Error al cancelar: ${res.status}`);
-  }
-
-  return res.json();
-}
-// NUEVO: ya lo tenías, pero lo dejo aquí por si acaso
-export async function reserveCourt(
-  courtId: number,
-  date: string,
-  time: string
-) {
-  const res = await fetch(`${API_BASE_URL}/reserve`, {
+export async function loginUser(email: string, password: string) {
+  const res = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ courtId, date, time }),
+    body: JSON.stringify({ email, password }),
   });
 
-  if (!res.ok) {
-    throw new Error(`Error al reservar: ${res.status}`);
-  }
+  return readJson(res);
+}
 
-  return res.json();
+export async function registerUser(email: string, password: string) {
+  const res = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+
+  return readJson(res);
+}
+
+// -------- RESERVATIONS (PROTEGIDO) --------
+
+export async function createReservation(input: {
+  courtId: number;
+  date: string;
+  time: string;
+}) {
+  const token = getToken();
+
+  const res = await fetch(`${API_BASE_URL}/reservations`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(input),
+  });
+
+  return readJson(res);
+}
+
+export async function getMyReservations() {
+  const token = getToken();
+
+  const res = await fetch(`${API_BASE_URL}/reservations/my`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return readJson(res);
+}
+
+export async function cancelReservation(id: number) {
+  const token = getToken();
+
+  const res = await fetch(`${API_BASE_URL}/reservations/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return readJson(res);
 }

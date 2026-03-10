@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { createReservation, getAvailability } from "../api";
+import { createReservation, getAvailability } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -30,17 +30,20 @@ export default function Reserve() {
   const [data, setData] = useState<Availability | null>(null);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
 
   const courts = useMemo(() => data?.courts || [], [data]);
 
   async function load() {
     setMsg("");
+    setError("");
     setLoading(true);
+
     try {
       const res = await getAvailability(date);
       setData(res);
     } catch (e: any) {
-      setMsg(`❌ ${e?.message || "Error cargando disponibilidad"}`);
+      setError(e?.message || "Error cargando disponibilidad");
     } finally {
       setLoading(false);
     }
@@ -53,106 +56,121 @@ export default function Reserve() {
 
   async function reserve(courtId: number, time: string) {
     setMsg("");
+    setError("");
 
     if (!isAuthenticated || !localStorage.getItem("padel_token")) {
-      setMsg("🔐 Debes iniciar sesión para reservar.");
-      setTimeout(() => navigate("/login"), 600);
+      setError("Debes iniciar sesión para reservar.");
+      setTimeout(() => navigate("/login"), 700);
       return;
     }
 
     try {
       const r = await createReservation({ courtId, date, time });
-      setMsg(`✅ Reserva creada (ID ${r.reservationId})`);
+      setMsg(`Reserva creada correctamente (ID ${r.reservationId})`);
       await load();
     } catch (e: any) {
-      setMsg(`❌ ${e?.message || "Error reservando"}`);
+      setError(e?.message || "No se pudo crear la reserva");
     }
   }
 
   return (
-    <div style={{ maxWidth: 1000, margin: "0 auto", padding: 16 }}>
-      <h1 style={{ marginBottom: 6 }}>Reservar pista</h1>
-      <p style={{ marginTop: 0, opacity: 0.75 }}>
-        Selecciona fecha y elige un tramo libre.
-      </p>
+    <div className="reserve-page">
+      <div className="section-panel">
+        <div style={{ marginBottom: 18 }}>
+          <span className="badge">Padex</span>
+          <h1 className="page-title" style={{ fontSize: 30, marginTop: 12 }}>
+            Reservar pista
+          </h1>
+          <p className="page-subtitle">
+            Selecciona una fecha y elige un tramo libre.
+          </p>
+        </div>
 
-      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}>
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        <button onClick={load} disabled={loading}>
-          {loading ? "Cargando..." : "Buscar disponibilidad"}
-        </button>
-        <button onClick={() => navigate("/mis-reservas")}>📋 Mis reservas</button>
-      </div>
-
-      {msg && (
         <div
           style={{
-            padding: "10px 12px",
-            borderRadius: 12,
-            background: "rgba(255,255,255,0.08)",
-            border: "1px solid rgba(255,255,255,0.12)",
-            marginBottom: 12,
+            display: "flex",
+            gap: 10,
+            flexWrap: "wrap",
+            alignItems: "end",
+            marginBottom: 16,
           }}
         >
-          {msg}
-        </div>
-      )}
+          <div style={{ minWidth: 220 }}>
+            <label htmlFor="reserve-date">Fecha</label>
+            <input
+              id="reserve-date"
+              className="input"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </div>
 
-      {!data ? (
-        <p style={{ opacity: 0.7 }}>No hay datos aún.</p>
-      ) : (
-        <div style={{ display: "grid", gap: 12 }}>
-          {courts.map((court) => (
-            <div
-              key={court.id}
-              style={{
-                borderRadius: 16,
-                padding: 14,
-                border: "1px solid rgba(255,255,255,0.12)",
-                background: "rgba(255,255,255,0.06)",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                <div>
-                  <div style={{ fontWeight: 900, fontSize: 16 }}>
-                    🎾 {court.name}
-                  </div>
-                  <div style={{ fontSize: 12, opacity: 0.75 }}>
-                    {court.type} · {court.slots.length} tramos
+          <button type="button" className="button" onClick={load} disabled={loading}>
+            {loading ? "Cargando..." : "Buscar disponibilidad"}
+          </button>
+
+          <button
+            type="button"
+            className="button-secondary"
+            onClick={() => navigate("/mis-reservas")}
+          >
+            Mis reservas
+          </button>
+        </div>
+
+        {msg && <div className="alert alert-success">{msg}</div>}
+        {error && <div className="alert alert-error">{error}</div>}
+
+        {!data ? (
+          <p className="page-subtitle" style={{ marginTop: 14 }}>
+            No hay datos disponibles todavía.
+          </p>
+        ) : (
+          <div className="reservation-grid" style={{ marginTop: 16 }}>
+            {courts.map((court) => (
+              <div key={court.id} className="reservation-card">
+                <div className="reservation-card-top">
+                  <div>
+                    <h3 style={{ margin: 0 }}>{court.name}</h3>
+                    <p style={{ margin: "6px 0 0", color: "var(--text-soft)", fontSize: 13 }}>
+                      {court.type}
+                    </p>
                   </div>
                 </div>
-              </div>
 
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
-                {court.slots.map((s) => (
-                  <button
-                    key={s.time}
-                    onClick={() => reserve(court.id, s.time)}
-                    disabled={s.status !== "FREE"}
-                    title={s.status}
-                    style={{
-                      padding: "8px 10px",
-                      borderRadius: 12,
-                      border: "1px solid rgba(255,255,255,0.14)",
-                      cursor: s.status === "FREE" ? "pointer" : "not-allowed",
-                      opacity: s.status === "FREE" ? 1 : 0.45,
-                      background:
-                        s.status === "FREE"
-                          ? "rgba(34,197,94,0.18)"
-                          : "rgba(239,68,68,0.14)",
-                      color: "white",
-                      fontWeight: 900,
-                      fontSize: 12,
-                    }}
-                  >
-                    {s.status === "FREE" ? "✅" : "⛔"} {s.time}
-                  </button>
-                ))}
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 8,
+                    marginTop: 14,
+                  }}
+                >
+                  {court.slots.map((slot) => {
+                    const isFree = slot.status === "FREE";
+
+                    return (
+                      <button
+                        key={slot.time}
+                        type="button"
+                        onClick={() => reserve(court.id, slot.time)}
+                        disabled={!isFree}
+                        className={`slot-btn ${isFree ? "slot-free" : "slot-busy"} ${
+                          !isFree ? "slot-disabled" : ""
+                        }`}
+                        title={isFree ? "Disponible" : "Ocupado"}
+                      >
+                        {slot.time}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { cancelReservation, getMyReservations } from "../api";
+import { getMyReservations, cancelReservation } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -15,6 +15,11 @@ function isPast(dateISO: string, timeHHMM: string) {
   return dt.getTime() < Date.now();
 }
 
+function formatDate(dateISO: string) {
+  const d = new Date(dateISO);
+  return d.toLocaleDateString("es-ES");
+}
+
 export default function MyReservations() {
   const navigate = useNavigate();
   const { isAuthenticated, userEmail } = useAuth();
@@ -22,26 +27,30 @@ export default function MyReservations() {
   const [items, setItems] = useState<ResItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
 
   const grouped = useMemo(() => {
     const map = new Map<string, ResItem[]>();
+
     items.forEach((r) => {
       const key = r.date;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(r);
     });
-    // ordenar por fecha desc
+
     return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1));
   }, [items]);
 
   async function load() {
     setMsg("");
+    setError("");
     setLoading(true);
+
     try {
       const res = await getMyReservations();
       setItems(res.reservations || []);
     } catch (e: any) {
-      setMsg(`❌ ${e?.message || "Error cargando tus reservas"}`);
+      setError(e?.message || "No se pudieron cargar tus reservas");
     } finally {
       setLoading(false);
     }
@@ -49,12 +58,14 @@ export default function MyReservations() {
 
   async function onCancel(id: number) {
     setMsg("");
+    setError("");
+
     try {
       await cancelReservation(id);
-      setMsg("✅ Reserva cancelada");
+      setMsg("Reserva cancelada correctamente");
       await load();
     } catch (e: any) {
-      setMsg(`❌ ${e?.message || "No se pudo cancelar"}`);
+      setError(e?.message || "No se pudo cancelar la reserva");
     }
   }
 
@@ -66,165 +77,188 @@ export default function MyReservations() {
 
   if (!isAuthenticated) {
     return (
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: 16 }}>
-        <h1>Mis reservas</h1>
-        <p>🔐 Debes iniciar sesión para ver tus reservas.</p>
-        <button onClick={() => navigate("/login")}>Ir a Login</button>
+      <div className="my-reservations-page">
+        <div className="section-panel" style={{ maxWidth: 520, margin: "0 auto" }}>
+          <h1 className="page-title" style={{ fontSize: 28 }}>
+            Mis reservas
+          </h1>
+          <p className="page-subtitle">
+            Debes iniciar sesión para ver y gestionar tus reservas.
+          </p>
+
+          <div style={{ marginTop: 16 }}>
+            <button
+              type="button"
+              className="button"
+              onClick={() => navigate("/login")}
+            >
+              Ir a iniciar sesión
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: 1000, margin: "0 auto", padding: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-        <div>
-          <h1 style={{ marginBottom: 6 }}>Mis reservas</h1>
-          <p style={{ marginTop: 0, opacity: 0.75 }}>
-            👤 {userEmail || "usuario"} · aquí puedes ver y cancelar tus reservas.
-          </p>
-        </div>
-
-        <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={() => navigate("/reservar")}>🎾 Reservar</button>
-          <button onClick={load} disabled={loading}>
-            {loading ? "Actualizando..." : "🔄 Actualizar"}
-          </button>
-        </div>
-      </div>
-
-      {msg && (
+    <div className="my-reservations-page">
+      <div className="section-panel">
         <div
           style={{
-            marginTop: 10,
-            padding: "10px 12px",
-            borderRadius: 12,
-            background: "rgba(255,255,255,0.08)",
-            border: "1px solid rgba(255,255,255,0.12)",
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 12,
+            alignItems: "center",
+            flexWrap: "wrap",
+            marginBottom: 18,
           }}
         >
-          {msg}
+          <div>
+            <span className="badge">Padex</span>
+            <h1 className="page-title" style={{ fontSize: 30, marginTop: 12 }}>
+              Mis reservas
+            </h1>
+            <p className="page-subtitle">
+              {userEmail ? `Usuario: ${userEmail}` : "Gestiona tus reservas activas"}
+            </p>
+          </div>
+
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="button"
+              onClick={() => navigate("/reservar")}
+            >
+              Reservar pista
+            </button>
+
+            <button
+              type="button"
+              className="button-secondary"
+              onClick={load}
+              disabled={loading}
+            >
+              {loading ? "Actualizando..." : "Actualizar"}
+            </button>
+          </div>
         </div>
-      )}
 
-      {loading && !items.length ? (
-        <p style={{ marginTop: 14, opacity: 0.7 }}>Cargando...</p>
-      ) : items.length === 0 ? (
-        <div style={{ marginTop: 14, opacity: 0.85 }}>
-          <p>📭 Aún no tienes reservas.</p>
-          <button onClick={() => navigate("/reservar")}>Crear mi primera reserva</button>
-        </div>
-      ) : (
-        <div style={{ marginTop: 14, display: "grid", gap: 14 }}>
-          {grouped.map(([date, list]) => (
-            <section key={date} style={styles.section}>
-              <div style={styles.sectionHead}>
-                <div style={{ fontWeight: 900 }}>📅 {date}</div>
-                <div style={{ fontSize: 12, opacity: 0.7 }}>{list.length} reserva(s)</div>
-              </div>
+        {msg && <div className="alert alert-success">{msg}</div>}
+        {error && <div className="alert alert-error">{error}</div>}
 
-              <div style={styles.grid}>
-                {list
-                  .slice()
-                  .sort((a, b) => (a.time < b.time ? -1 : 1))
-                  .map((r) => {
-                    const past = isPast(r.date, r.time);
-                    return (
-                      <div key={r.id} style={{ ...styles.card, ...(past ? styles.cardPast : {}) }}>
-                        <div style={styles.cardTop}>
-                          <div style={{ fontWeight: 900, fontSize: 14 }}>
-                            🎾 Pista {r.courtId}
+        {loading && items.length === 0 ? (
+          <p className="page-subtitle" style={{ marginTop: 12 }}>
+            Cargando reservas...
+          </p>
+        ) : items.length === 0 ? (
+          <div className="reservation-card" style={{ marginTop: 14 }}>
+            <p style={{ marginTop: 0, marginBottom: 12 }}>
+              Aún no tienes reservas creadas.
+            </p>
+
+            <button
+              type="button"
+              className="button"
+              onClick={() => navigate("/reservar")}
+            >
+              Crear mi primera reserva
+            </button>
+          </div>
+        ) : (
+          <div style={{ marginTop: 16, display: "grid", gap: 16 }}>
+            {grouped.map(([date, list]) => (
+              <section key={date} className="section-panel" style={{ padding: 16 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    alignItems: "center",
+                    marginBottom: 12,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <h2 style={{ margin: 0, fontSize: 18 }}>
+                    {formatDate(date)}
+                  </h2>
+                  <span className="badge">{list.length} reserva(s)</span>
+                </div>
+
+                <div className="reservation-grid">
+                  {list
+                    .slice()
+                    .sort((a, b) => (a.time < b.time ? -1 : 1))
+                    .map((r) => {
+                      const past = isPast(r.date, r.time);
+
+                      return (
+                        <div key={r.id} className="reservation-card">
+                          <div className="reservation-card-top">
+                            <div>
+                              <h3 style={{ margin: 0, fontSize: 16 }}>
+                                Pista {r.courtId}
+                              </h3>
+                              <p
+                                style={{
+                                  margin: "6px 0 0",
+                                  color: "var(--text-soft)",
+                                  fontSize: 13,
+                                }}
+                              >
+                                {formatDate(r.date)} · {r.time}
+                              </p>
+                            </div>
+
+                            <span
+                              className={`reservation-status ${
+                                past ? "past" : "active"
+                              }`}
+                            >
+                              {past ? "Pasada" : "Activa"}
+                            </span>
                           </div>
-                          <div style={{ fontSize: 12, opacity: 0.8 }}>
-                            ⏰ {r.time}
-                          </div>
-                        </div>
 
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                          <span
+                          <div
                             style={{
-                              ...styles.badge,
-                              background: past ? "rgba(148,163,184,0.18)" : "rgba(34,197,94,0.18)",
-                              borderColor: past ? "rgba(148,163,184,0.25)" : "rgba(34,197,94,0.25)",
+                              marginTop: 14,
+                              display: "flex",
+                              justifyContent: "space-between",
+                              gap: 10,
+                              alignItems: "center",
+                              flexWrap: "wrap",
                             }}
                           >
-                            {past ? "⏳ Pasada" : "✅ Activa"}
-                          </span>
+                            <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
+                              ID #{r.id}
+                            </span>
 
-                          <button
-                            onClick={() => onCancel(r.id)}
-                            disabled={past}
-                            style={{
-                              ...styles.btn,
-                              opacity: past ? 0.45 : 1,
-                              cursor: past ? "not-allowed" : "pointer",
-                            }}
-                            title={past ? "No se puede cancelar una reserva pasada" : "Cancelar reserva"}
-                          >
-                            🗑️ Cancelar
-                          </button>
+                            <button
+                              type="button"
+                              className="btn-danger"
+                              onClick={() => onCancel(r.id)}
+                              disabled={past}
+                              style={{
+                                opacity: past ? 0.5 : 1,
+                                cursor: past ? "not-allowed" : "pointer",
+                              }}
+                              title={
+                                past
+                                  ? "No se puede cancelar una reserva pasada"
+                                  : "Cancelar reserva"
+                              }
+                            >
+                              Cancelar
+                            </button>
+                          </div>
                         </div>
-
-                        <div style={{ marginTop: 10, fontSize: 12, opacity: 0.6 }}>
-                          ID: {r.id}
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
+                      );
+                    })}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  section: {
-    borderRadius: 18,
-    padding: 14,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(255,255,255,0.06)",
-  },
-  sectionHead: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: 12,
-  },
-  card: {
-    borderRadius: 16,
-    padding: 12,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(0,0,0,0.22)",
-  },
-  cardPast: {
-    filter: "grayscale(0.3)",
-  },
-  cardTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 10,
-    alignItems: "center",
-  },
-  badge: {
-    fontSize: 12,
-    fontWeight: 900,
-    padding: "6px 10px",
-    borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.12)",
-  },
-  btn: {
-    borderRadius: 12,
-    padding: "8px 10px",
-    fontWeight: 900,
-    border: "1px solid rgba(255,255,255,0.14)",
-    background: "rgba(239,68,68,0.14)",
-    color: "white",
-  },
-};

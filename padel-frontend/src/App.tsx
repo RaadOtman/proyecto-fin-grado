@@ -22,7 +22,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Fallback: si escribes una ruta rara, vuelve a inicio */}
+          
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
