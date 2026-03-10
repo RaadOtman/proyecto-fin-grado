@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Loader from "../components/Loader";
-import SkeletonCard from "../components/Skeletoncard";
+import SkeletonCard from "../components/SkeletonCard";
 
 type Availability = {
   date: string;
