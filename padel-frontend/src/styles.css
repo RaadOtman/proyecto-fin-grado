@@ -178,6 +178,21 @@ body::before {
   color: var(--text-main);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
+/* header más ancho para separar logo/nav y acciones */
+.header .container {
+  max-width: 1400px;
+}
+
+.header-inner {
+  width: 100%;
+}
+
+.nav-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 /* animación del logo */
 
 @keyframes padexLogoReveal {
@@ -704,6 +719,86 @@ textarea:focus {
 .footer-author {
   font-weight: 600;
 }
+/* ================= LOADER ================= */
+
+.loader-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+.loader-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-top-color: var(--secondary);
+  animation: spin 0.8s linear infinite;
+}
+
+/* ================= SKELETON ================= */
+
+.skeleton-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.skeleton-card {
+  border-radius: 16px;
+  padding: 14px;
+  border: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.06) 25%,
+    rgba(255, 255, 255, 0.14) 50%,
+    rgba(255, 255, 255, 0.06) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite linear;
+}
+
+.skeleton-line + .skeleton-line {
+  margin-top: 10px;
+}
+
+.skeleton-line-title {
+  width: 45%;
+  height: 14px;
+}
+
+.skeleton-line-text {
+  width: 100%;
+}
+
+.skeleton-line-text.short {
+  width: 70%;
+}
+
+/* ================= ANIMATIONS ================= */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 
 /* ================= RESPONSIVE ================= */
 

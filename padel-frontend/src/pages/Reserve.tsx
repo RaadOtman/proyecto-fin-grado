@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { createReservation, getAvailability } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import Loader from "../components/Loader";
+import SkeletonCard from "../components/Skeletoncard";
 
 type Availability = {
   date: string;
@@ -74,7 +77,12 @@ export default function Reserve() {
   }
 
   return (
-    <div className="reserve-page">
+    <motion.div
+      className="reserve-page"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28 }}
+    >
       <div className="section-panel">
         <div style={{ marginBottom: 18 }}>
           <span className="badge">Padex</span>
@@ -122,7 +130,16 @@ export default function Reserve() {
         {msg && <div className="alert alert-success">{msg}</div>}
         {error && <div className="alert alert-error">{error}</div>}
 
-        {!data ? (
+        {loading && !data ? (
+          <div style={{ marginTop: 16 }}>
+            <Loader text="Cargando disponibilidad..." />
+            <div className="skeleton-grid" style={{ marginTop: 16 }}>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+          </div>
+        ) : !data ? (
           <p className="page-subtitle" style={{ marginTop: 14 }}>
             No hay datos disponibles todavía.
           </p>
@@ -133,7 +150,13 @@ export default function Reserve() {
                 <div className="reservation-card-top">
                   <div>
                     <h3 style={{ margin: 0 }}>{court.name}</h3>
-                    <p style={{ margin: "6px 0 0", color: "var(--text-soft)", fontSize: 13 }}>
+                    <p
+                      style={{
+                        margin: "6px 0 0",
+                        color: "var(--text-soft)",
+                        fontSize: 13,
+                      }}
+                    >
                       {court.type}
                     </p>
                   </div>
@@ -171,6 +194,6 @@ export default function Reserve() {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

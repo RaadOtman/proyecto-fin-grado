@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { getMyReservations, cancelReservation } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import Loader from "../components/Loader";
+import SkeletonCard from "../components/Skeletoncard";
 
 type ResItem = {
   id: number;
@@ -77,7 +80,12 @@ export default function MyReservations() {
 
   if (!isAuthenticated) {
     return (
-      <div className="my-reservations-page">
+      <motion.div
+        className="my-reservations-page"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.28 }}
+      >
         <div className="section-panel" style={{ maxWidth: 520, margin: "0 auto" }}>
           <h1 className="page-title" style={{ fontSize: 28 }}>
             Mis reservas
@@ -96,12 +104,17 @@ export default function MyReservations() {
             </button>
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="my-reservations-page">
+    <motion.div
+      className="my-reservations-page"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28 }}
+    >
       <div className="section-panel">
         <div
           style={{
@@ -147,9 +160,13 @@ export default function MyReservations() {
         {error && <div className="alert alert-error">{error}</div>}
 
         {loading && items.length === 0 ? (
-          <p className="page-subtitle" style={{ marginTop: 12 }}>
-            Cargando reservas...
-          </p>
+          <div style={{ marginTop: 16 }}>
+            <Loader text="Cargando reservas..." />
+            <div className="skeleton-grid" style={{ marginTop: 16 }}>
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+          </div>
         ) : items.length === 0 ? (
           <div className="reservation-card" style={{ marginTop: 14 }}>
             <p style={{ marginTop: 0, marginBottom: 12 }}>
@@ -259,6 +276,6 @@ export default function MyReservations() {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

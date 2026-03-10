@@ -30,6 +30,7 @@ export default function Home() {
 
       login(email.trim());
       setMsg("Sesión iniciada correctamente");
+      setTimeout(() => navigate("/reservar"), 500);
     } catch (err: any) {
       setError(err?.message || "No se pudo iniciar sesión");
     } finally {
@@ -38,7 +39,12 @@ export default function Home() {
   }
 
   return (
-    <div className="home-root">
+    <motion.div
+      className="home-root"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       <motion.section
         className="home-top-row"
         initial={{ opacity: 0, y: 18 }}
@@ -81,9 +87,7 @@ export default function Home() {
             </>
           ) : (
             <>
-              <h1 className="home-hero-title">
-                Bienvenido de nuevo a Padex
-              </h1>
+              <h1 className="home-hero-title">Bienvenido de nuevo a Padex</h1>
 
               <p className="home-hero-subtitle">
                 Ya puedes consultar pistas disponibles, crear nuevas reservas o
@@ -173,6 +177,7 @@ export default function Home() {
                 </button>
 
                 {msg && <p className="home-login-demo-info">{msg}</p>}
+
                 {error && (
                   <p
                     className="home-login-demo-info"
@@ -263,6 +268,6 @@ export default function Home() {
           </div>
         </div>
       </motion.section>
-    </div>
+    </motion.div>
   );
 }

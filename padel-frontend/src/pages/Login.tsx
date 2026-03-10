@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginUser } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
+import { motion } from "framer-motion";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -49,7 +50,12 @@ export default function Login() {
   }
 
   return (
-    <div className="auth-page">
+    <motion.div
+      className="auth-page"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28 }}
+    >
       <div className="section-panel" style={{ maxWidth: 420, margin: "0 auto" }}>
         <div style={{ marginBottom: 16 }}>
           <span className="badge">Padex</span>
@@ -140,6 +146,6 @@ export default function Login() {
           </form>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
