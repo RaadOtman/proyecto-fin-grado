@@ -1,0 +1,49 @@
+<svg width="520" height="160" viewBox="0 0 520 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="padexGradient" x1="40" y1="20" x2="480" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22C55E"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icono -->
+  <g transform="translate(20,20)">
+    <rect x="0" y="0" width="96" height="96" rx="24" fill="url(#padexGradient)" opacity="0.18"/>
+    <path
+      d="M24 72C24 51.0132 41.0132 34 62 34H68C68 54.9868 50.9868 72 30 72H24Z"
+      fill="url(#padexGradient)"
+    />
+    <path
+      d="M72 24C72 44.9868 54.9868 62 34 62H28C28 41.0132 45.0132 24 66 24H72Z"
+      fill="white"
+      opacity="0.95"
+    />
+    <circle cx="70" cy="70" r="6" fill="white" opacity="0.95"/>
+  </g>
+
+  <!-- Texto -->
+  <g transform="translate(140,42)">
+    <text
+      x="0"
+      y="48"
+      font-family="Inter, Segoe UI, Arial, sans-serif"
+      font-size="54"
+      font-weight="800"
+      letter-spacing="2"
+      fill="white"
+    >
+      PADEX
+    </text>
+    <text
+      x="3"
+      y="84"
+      font-family="Inter, Segoe UI, Arial, sans-serif"
+      font-size="16"
+      font-weight="500"
+      letter-spacing="4"
+      fill="#94A3B8"
+    >
+      RESERVAS DE PÁDEL
+    </text>
+  </g>
+</svg>
