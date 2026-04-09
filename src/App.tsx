@@ -9,6 +9,7 @@ import AdminLayout from "./components/admin/AdminLayout";
 import Home from "./pages/Home";
 import Reserve from "./pages/Reserve";
 import MyReservations from "./pages/MyReservations";
+import MiClub from "./pages/MiClub";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -33,6 +34,10 @@ export default function App() {
           <Route
             path="/mis-reservas"
             element={<ProtectedRoute><MyReservations /></ProtectedRoute>}
+          />
+          <Route
+            path="/mi-club"
+            element={<ProtectedRoute><MiClub /></ProtectedRoute>}
           />
 
           <Route path="/login" element={<Login />} />

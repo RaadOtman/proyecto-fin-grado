@@ -52,6 +52,15 @@ export default function Header() {
             </NavLink>
           )}
 
+          {isAuthenticated && (
+            <NavLink
+              to="/mi-club"
+              className={({ isActive }) => (isActive ? "active" : "")}
+            >
+              Mi club
+            </NavLink>
+          )}
+
           {isAdmin && (
             <NavLink
               to="/admin/dashboard"

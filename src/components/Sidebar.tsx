@@ -92,6 +92,9 @@ export default function Sidebar() {
             <NavLink to="/mis-reservas" className={getClassName}>
               📅 Mis reservas
             </NavLink>
+            <NavLink to="/mi-club" className={getClassName}>
+              🏟️ Mi club
+            </NavLink>
             {isAdmin && (
               <NavLink to="/admin/dashboard" className={getClassName}>
                 ⚙️ Panel Admin

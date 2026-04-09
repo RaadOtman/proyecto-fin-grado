@@ -88,3 +88,25 @@ export async function cancelReservation(id: number) {
 
   return readJson(res);
 }
+
+// -------- CLUBS --------
+
+export async function getClubs() {
+  const res = await fetch(`${API_BASE_URL}/clubs`);
+  return readJson(res);
+}
+
+export async function getClub(id: number) {
+  const res = await fetch(`${API_BASE_URL}/clubs/${id}`);
+  return readJson(res);
+}
+
+export async function patchUserClub(userId: number, clubId: number | null) {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/club`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ clubId }),
+  });
+  return readJson(res);
+}

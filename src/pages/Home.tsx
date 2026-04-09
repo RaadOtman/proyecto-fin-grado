@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   FiCalendar,
   FiLogIn,
@@ -9,9 +9,21 @@ import {
   FiSearch,
   FiZap,
   FiList,
+  FiMapPin,
+  FiGrid,
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
-import { loginUser } from "../lib/apiClient";
+import { loginUser, getClub } from "../lib/apiClient";
+
+type ClubData = {
+  id: number;
+  name: string;
+  city: string;
+  description: string | null;
+  image_url: string | null;
+  maps_url: string | null;
+  court_count: number | null;
+};
 
 const STEPS = [
   {
@@ -59,7 +71,7 @@ const fade = (delay = 0) => ({
 });
 
 export default function Home() {
-  const { isAuthenticated, userEmail, login } = useAuth();
+  const { isAuthenticated, userEmail, clubId, login } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -68,6 +80,18 @@ export default function Home() {
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
 
+  const [club, setClub] = useState<ClubData | null>(null);
+
+  useEffect(() => {
+    if (clubId) {
+      getClub(clubId)
+        .then((d) => setClub(d.club ?? null))
+        .catch(() => setClub(null));
+    } else {
+      setClub(null);
+    }
+  }, [clubId]);
+
   async function handleLogin(e: FormEvent) {
     e.preventDefault();
     setMsg("");
@@ -75,9 +99,11 @@ export default function Home() {
     setLoading(true);
     try {
       const res = await loginUser(email.trim(), password);
-      const emailFromApi = res.email ?? email.trim();
-      const roleFromApi = res.role ?? "user";
-      login(emailFromApi, roleFromApi);
+      const emailFromApi  = res.email    ?? email.trim();
+      const roleFromApi   = res.role     ?? "user";
+      const idFromApi     = res.id       ?? null;
+      const clubIdFromApi = res.club_id  ?? null;
+      login(emailFromApi, roleFromApi, idFromApi, clubIdFromApi);
       setMsg("Sesión iniciada correctamente");
       setTimeout(() => navigate(roleFromApi === "admin" ? "/admin/dashboard" : "/reservar"), 500);
     } catch (err: any) {
@@ -89,6 +115,84 @@ export default function Home() {
 
   return (
     <div className="home-root">
+
+      {/* ── CLUB HERO (autenticado) ── */}
+      <AnimatePresence mode="wait">
+        {isAuthenticated && club && (
+          <motion.div
+            key={club.id}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {/* Hero con imagen del club */}
+            <section
+              className="home-club-hero"
+              style={club.image_url ? { backgroundImage: `url(${club.image_url})` } : {}}
+            >
+              <div className="home-overlay" />
+              <div className="home-content">
+                <span className="home-chip">Tu club</span>
+                <h1 className="home-club-hero-title">Bienvenido a {club.name}</h1>
+                <p className="home-club-hero-subtitle">
+                  Reserva tu pista de pádel en segundos
+                </p>
+                <button
+                  type="button"
+                  className="home-button"
+                  onClick={() => navigate("/reservar")}
+                >
+                  <FiCalendar size={18} />
+                  Reservar pista
+                </button>
+              </div>
+            </section>
+
+            {/* Info del club */}
+            <section className="home-club-info">
+              <div className="home-club-info-inner">
+                <div className="home-club-info-item">
+                  <FiMapPin size={15} />
+                  <span>{club.city}</span>
+                </div>
+                {club.court_count != null && (
+                  <div className="home-club-info-item">
+                    <FiGrid size={15} />
+                    <span>{club.court_count} pistas disponibles</span>
+                  </div>
+                )}
+                {club.description && (
+                  <p className="home-club-info-desc">{club.description}</p>
+                )}
+              </div>
+            </section>
+          </motion.div>
+        )}
+
+        {isAuthenticated && !club && (
+          <motion.section
+            key="no-club"
+            className="home-no-club"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            <p className="home-no-club-title">Selecciona tu club para comenzar</p>
+            <p className="home-no-club-desc">
+              Elige el club al que perteneces para ver su información aquí.
+            </p>
+            <button
+              type="button"
+              className="home-button"
+              onClick={() => navigate("/mi-club")}
+            >
+              Elegir club
+            </button>
+          </motion.section>
+        )}
+      </AnimatePresence>
 
       {/* ── HERO ── */}
       <motion.section className="home-hero" {...fade(0)}>

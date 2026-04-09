@@ -29,10 +29,12 @@ export default function Login() {
       const res = await loginUser(email.trim(), password);
 
       const emailFromApi = res.email ?? res.user?.email ?? email.trim();
-      const roleFromApi = res.role ?? res.user?.role ?? "user";
+      const roleFromApi  = res.role   ?? res.user?.role   ?? "user";
+      const idFromApi    = res.id     ?? res.user?.id     ?? null;
+      const clubIdFromApi = res.club_id ?? res.user?.club_id ?? null;
 
       flushSync(() => {
-        login(emailFromApi, roleFromApi);
+        login(emailFromApi, roleFromApi, idFromApi, clubIdFromApi);
         setPassword("");
       });
 
