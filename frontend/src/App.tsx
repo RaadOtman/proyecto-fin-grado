@@ -20,6 +20,7 @@ import AdminPistas from "./pages/admin/AdminPistas";
 export default function App() {
   return (
     <div className="app-shell">
+      {/* El header aparece en todas las páginas */}
       <Header />
 
       <Routes>
@@ -27,6 +28,7 @@ export default function App() {
         <Route element={<UserLayout />}>
           <Route path="/" element={<Home />} />
 
+          {/* Estas rutas requieren haber iniciado sesión */}
           <Route
             path="/reservar"
             element={<ProtectedRoute><Reserve /></ProtectedRoute>}
@@ -40,11 +42,13 @@ export default function App() {
             element={<ProtectedRoute><MiClub /></ProtectedRoute>}
           />
 
+          {/* Rutas públicas de autenticación */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
         </Route>
 
         {/* ── Rutas de administración (con sidebar admin) ── */}
+        {/* AdminRoute comprueba que el usuario tenga rol 'admin' */}
         <Route
           path="/admin"
           element={<AdminRoute><AdminLayout /></AdminRoute>}
@@ -56,6 +60,7 @@ export default function App() {
           <Route path="pistas" element={<AdminPistas />} />
         </Route>
 
+        {/* Cualquier ruta desconocida redirige al inicio */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 

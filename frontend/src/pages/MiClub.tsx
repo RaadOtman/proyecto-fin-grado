@@ -15,15 +15,16 @@ type Club = {
   court_count: number | null;
 };
 
+// Variante de animación reutilizable para que los elementos aparezcan suavemente
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
   show:   { opacity: 1, y: 0, transition: { duration: 0.25 } },
 };
 
+// Convierte una URL normal de Google Maps a una URL de embed para el iframe
+// Si ya es embed la deja como está
 function toEmbedUrl(url: string): string {
-  // Already an embed URL — use as-is
   if (url.includes("/maps/embed") || url.includes("output=embed")) return url;
-  // Standard google maps link → append output=embed
   if (url.includes("google.com/maps") || url.includes("maps.google.com")) {
     const sep = url.includes("?") ? "&" : "?";
     return `${url}${sep}output=embed`;
@@ -32,6 +33,7 @@ function toEmbedUrl(url: string): string {
 }
 
 export default function MiClub() {
+  // Sacamos del contexto el id del usuario y su club actual guardado
   const { userId, clubId, updateClub } = useAuth();
 
   const [clubs,    setClubs   ] = useState<Club[]>([]);
@@ -39,8 +41,10 @@ export default function MiClub() {
   const [saving,   setSaving  ] = useState(false);
   const [error,    setError   ] = useState("");
   const [msg,      setMsg     ] = useState("");
+  // Este estado guarda el club que el usuario tiene marcado en la UI (no el guardado todavía)
   const [selected, setSelected] = useState<number | "">(clubId ?? "");
 
+  // Cargamos la lista de clubes al entrar en la página
   useEffect(() => {
     getClubs()
       .then((d) => setClubs(d.clubs || []))
@@ -48,13 +52,17 @@ export default function MiClub() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Si el club del usuario cambia desde fuera (por ejemplo después de guardar), actualizamos la selección
   useEffect(() => {
     setSelected(clubId ?? "");
   }, [clubId]);
 
+  // El club que se muestra en el panel de detalle es el que está seleccionado en la UI
   const previewClub = selected !== "" ? (clubs.find((c) => c.id === selected) ?? null) : null;
+  // Hay cambios pendientes si la selección actual es diferente a la guardada en el backend
   const hasChanged  = selected !== (clubId ?? "");
 
+  // Llama al backend para guardar el club seleccionado y actualiza el contexto
   async function handleSave() {
     if (!userId) return;
     setSaving(true);
@@ -71,12 +79,14 @@ export default function MiClub() {
     }
   }
 
+  // Descarta los cambios y vuelve al club guardado
   function handleCancel() {
     setSelected(clubId ?? "");
     setMsg("");
     setError("");
   }
 
+  // Marca un club como seleccionado en la UI (aún no se guarda)
   function handleSelect(id: number | "") {
     setMsg("");
     setError("");
@@ -112,7 +122,7 @@ export default function MiClub() {
             </p>
 
             <div className="club-grid">
-              {/* Opción "Sin club" */}
+              {/* Opción para desvincular el club actual */}
               <button
                 type="button"
                 className={`club-card club-card-none${selected === "" ? " club-card-selected" : ""}`}
@@ -122,6 +132,7 @@ export default function MiClub() {
                 <span>Sin club</span>
               </button>
 
+              {/* Una card por cada club disponible */}
               {clubs.map((club) => {
                 const isSelected = selected === club.id;
                 return (
@@ -153,6 +164,7 @@ export default function MiClub() {
                           </p>
                         </div>
 
+                        {/* El check verde aparece solo si este club está seleccionado */}
                         {isSelected && (
                           <span className="club-card-check">
                             <FiCheck size={11} />
@@ -171,7 +183,7 @@ export default function MiClub() {
               })}
             </div>
 
-            {/* Barra de guardar */}
+            {/* La barra de guardar solo aparece si hay cambios sin guardar */}
             <AnimatePresence>
               {hasChanged && (
                 <motion.div
@@ -205,6 +217,7 @@ export default function MiClub() {
           </div>
 
           {/* ── Detalle del club seleccionado ── */}
+          {/* AnimatePresence con mode="wait" hace que el antiguo desaparezca antes de que entre el nuevo */}
           <AnimatePresence mode="wait">
             {previewClub ? (
               <motion.div
@@ -258,7 +271,7 @@ export default function MiClub() {
                   )}
                 </div>
 
-                {/* ── Mapa embebido ── */}
+                {/* Mapa embebido de Google Maps usando la URL del club */}
                 <div className="club-map">
                   {previewClub.maps_url ? (
                     <iframe
@@ -274,6 +287,7 @@ export default function MiClub() {
                 </div>
               </motion.div>
             ) : (
+              // Si no hay club seleccionado mostramos un estado vacío con instrucciones
               <motion.div
                 key="empty"
                 className="section-panel club-empty-state"

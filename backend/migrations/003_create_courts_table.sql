@@ -1,0 +1,20 @@
+-- Migración 003 — Tabla courts
+-- NOTA: Esta tabla ya existe en la base de datos local con la siguiente estructura.
+-- Este archivo documenta el schema real para referencia.
+
+-- CREATE TABLE courts (
+--   id         INT AUTO_INCREMENT PRIMARY KEY,
+--   name       VARCHAR(100) NOT NULL,
+--   type       ENUM('Interior', 'Exterior') NOT NULL,
+--   status     ENUM('active', 'inactive', 'maintenance') NOT NULL DEFAULT 'active',
+--   capacity   INT NOT NULL DEFAULT 4,
+--   notes      VARCHAR(255),
+--   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+-- );
+--
+-- INSERT INTO courts (name, type) VALUES
+--   ('Pista 1', 'Exterior'),
+--   ('Pista 2', 'Exterior'),
+--   ('Pista 3', 'Interior'),
+--   ('Pista 4', 'Interior');

@@ -15,6 +15,7 @@ export default function Login() {
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
 
+  // El botón de envío solo se activa si el email tiene @ y la contraseña tiene al menos 4 caracteres
   const canSubmit = useMemo(() => {
     return email.trim().includes("@") && password.length >= 4 && !loading;
   }, [email, password, loading]);
@@ -26,6 +27,7 @@ export default function Login() {
     setLoading(true);
 
     try {
+      // Llamamos al backend con el email y la contraseña
       const res = await loginUser(email.trim(), password);
 
       const emailFromApi = res.email ?? res.user?.email ?? email.trim();
@@ -33,11 +35,13 @@ export default function Login() {
       const idFromApi    = res.id     ?? res.user?.id     ?? null;
       const clubIdFromApi = res.club_id ?? res.user?.club_id ?? null;
 
+      // Guardamos la sesión en el contexto y en localStorage
       flushSync(() => {
         login(emailFromApi, roleFromApi, idFromApi, clubIdFromApi);
         setPassword("");
       });
 
+      // Si es admin va al panel, si no va a reservar
       if (roleFromApi === "admin") {
         navigate("/admin/dashboard");
       } else {
@@ -75,6 +79,7 @@ export default function Login() {
           </p>
         </div>
 
+        {/* Si ya tiene sesión, mostramos accesos directos en vez del formulario */}
         {isAuthenticated ? (
           <div className="reservation-card">
             <p style={{ marginTop: 0 }}>

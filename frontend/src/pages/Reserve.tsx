@@ -17,6 +17,7 @@ type Availability = {
   }[];
 };
 
+// Devuelve la fecha de hoy en formato YYYY-MM-DD para el input de tipo date
 function todayISO() {
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -29,14 +30,17 @@ export default function Reserve() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
+  // Estado de la fecha seleccionada, los datos de disponibilidad y mensajes
   const [date, setDate] = useState(todayISO());
   const [data, setData] = useState<Availability | null>(null);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
 
+  // Sacamos las pistas del objeto de disponibilidad
   const courts = useMemo(() => data?.courts || [], [data]);
 
+  // Consulta la disponibilidad para la fecha seleccionada
   async function load() {
     setMsg("");
     setError("");
@@ -52,15 +56,18 @@ export default function Reserve() {
     }
   }
 
+  // Cargamos la disponibilidad al entrar en la página
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Crea una reserva cuando el usuario hace clic en un slot libre
   async function reserve(court_id: number, start_time: string) {
     setMsg("");
     setError("");
 
+    // Si no está autenticado lo mandamos a login
     if (!isAuthenticated) {
       setError("Debes iniciar sesión para reservar.");
       setTimeout(() => navigate("/login"), 700);
@@ -70,6 +77,7 @@ export default function Reserve() {
     try {
       const r = await createReservation({ court_id, reservation_date: date, start_time });
       setMsg(`Reserva creada correctamente (ID ${r.reservationId})`);
+      // Recargamos la disponibilidad para que el slot aparezca como ocupado
       await load();
     } catch (e: any) {
       setError(e?.message || "No se pudo crear la reserva");
@@ -118,6 +126,7 @@ export default function Reserve() {
         {msg && <div className="alert alert-success">{msg}</div>}
         {error && <div className="alert alert-error">{error}</div>}
 
+        {/* Mostramos skeleton cards mientras carga por primera vez */}
         {loading && !data ? (
           <div className="page-loading">
             <Loader text="Cargando disponibilidad..." />
@@ -130,6 +139,7 @@ export default function Reserve() {
         ) : !data ? (
           <p className="page-empty">No hay datos disponibles todavía.</p>
         ) : (
+          // Grid con una card por cada pista
           <div className="reservation-grid">
             {courts.map((court) => (
               <div key={court.id} className="reservation-card">
@@ -138,6 +148,7 @@ export default function Reserve() {
                   <span className="court-type">{court.type}</span>
                 </div>
 
+                {/* Los slots en verde están libres, los grises están ocupados */}
                 <div className="slots-grid">
                   {court.slots.map((slot) => {
                     const isFree = slot.status === "FREE";

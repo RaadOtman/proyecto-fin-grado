@@ -1,0 +1,26 @@
+# Variables de entorno — NUNCA commitear
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Dependencias
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Archivos de build
+dist/
+build/
+
+# Cobertura de tests
+coverage/
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/

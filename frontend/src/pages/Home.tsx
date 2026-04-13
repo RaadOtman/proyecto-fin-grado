@@ -15,6 +15,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { loginUser, getClub } from "../lib/apiClient";
 
+// Tipo de datos que devuelve el backend para un club
 type ClubData = {
   id: number;
   name: string;
@@ -25,6 +26,7 @@ type ClubData = {
   court_count: number | null;
 };
 
+// Pasos del proceso de reserva, para la sección "Cómo funciona"
 const STEPS = [
   {
     n: "01",
@@ -43,6 +45,7 @@ const STEPS = [
   },
 ];
 
+// Tarjetas de funcionalidades que se muestran en la home
 const FEATURES = [
   {
     icon: <FiSearch size={18} />,
@@ -64,6 +67,7 @@ const FEATURES = [
   },
 ];
 
+// Función reutilizable para la animación de entrada de las secciones
 const fade = (delay = 0) => ({
   initial: { opacity: 0, y: 16 },
   animate: { opacity: 1, y: 0 },
@@ -74,14 +78,17 @@ export default function Home() {
   const { isAuthenticated, userEmail, clubId, login } = useAuth();
   const navigate = useNavigate();
 
+  // Estados del formulario de login rápido de la home
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
 
+  // Datos del club del usuario para mostrar el hero dinámico
   const [club, setClub] = useState<ClubData | null>(null);
 
+  // Cuando cambia el club del usuario, lo cargamos desde el backend
   useEffect(() => {
     if (clubId) {
       getClub(clubId)
@@ -92,6 +99,7 @@ export default function Home() {
     }
   }, [clubId]);
 
+  // Maneja el login desde el formulario de acceso rápido de la home
   async function handleLogin(e: FormEvent) {
     e.preventDefault();
     setMsg("");
@@ -105,6 +113,7 @@ export default function Home() {
       const clubIdFromApi = res.club_id  ?? null;
       login(emailFromApi, roleFromApi, idFromApi, clubIdFromApi);
       setMsg("Sesión iniciada correctamente");
+      // Si es admin va al dashboard, si no a la página de reservar
       setTimeout(() => navigate(roleFromApi === "admin" ? "/admin/dashboard" : "/reservar"), 500);
     } catch (err: any) {
       setError(err?.message || "No se pudo iniciar sesión");
@@ -116,9 +125,10 @@ export default function Home() {
   return (
     <div className="home-root">
 
-      {/* ── CLUB HERO (autenticado) ── */}
+      {/* ── HERO DINÁMICO DEL CLUB (solo si está autenticado) ── */}
       <AnimatePresence mode="wait">
         {isAuthenticated && club && (
+          // Si el usuario tiene club, mostramos su imagen de fondo y su nombre
           <motion.div
             key={club.id}
             initial={{ opacity: 0 }}
@@ -126,11 +136,11 @@ export default function Home() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            {/* Hero con imagen del club */}
             <section
               className="home-club-hero"
               style={club.image_url ? { backgroundImage: `url(${club.image_url})` } : {}}
             >
+              {/* Overlay oscuro para que el texto sea legible sobre la imagen */}
               <div className="home-overlay" />
               <div className="home-content">
                 <span className="home-chip">Tu club</span>
@@ -149,7 +159,7 @@ export default function Home() {
               </div>
             </section>
 
-            {/* Info del club */}
+            {/* Barra con datos básicos del club (ciudad, pistas, descripción) */}
             <section className="home-club-info">
               <div className="home-club-info-inner">
                 <div className="home-club-info-item">
@@ -170,6 +180,7 @@ export default function Home() {
           </motion.div>
         )}
 
+        {/* Si está autenticado pero no tiene club, pedimos que elija uno */}
         {isAuthenticated && !club && (
           <motion.section
             key="no-club"
@@ -194,11 +205,12 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* ── HERO ── */}
+      {/* ── HERO PRINCIPAL (texto + formulario de login rápido) ── */}
       <motion.section className="home-hero" {...fade(0)}>
         <div className="home-hero-content">
           <span className="home-chip">App de reservas · Pádel</span>
 
+          {/* El título cambia dependiendo de si hay sesión iniciada o no */}
           <h1 className="home-hero-title">
             {isAuthenticated
               ? `Bienvenido, ${userEmail?.split("@")[0]}`
@@ -243,7 +255,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Panel login / bienvenida */}
+        {/* Panel lateral: formulario de login si no hay sesión, accesos rápidos si sí la hay */}
         <motion.aside className="home-login-panel" {...fade(0.1)}>
           {!isAuthenticated ? (
             <>
@@ -373,7 +385,7 @@ export default function Home() {
         </div>
       </motion.section>
 
-      {/* ── CTA ── */}
+      {/* ── CTA FINAL (solo si no hay sesión) ── */}
       {!isAuthenticated && (
         <motion.section className="home-cta" {...fade(0.25)}>
           <div className="home-cta-content">

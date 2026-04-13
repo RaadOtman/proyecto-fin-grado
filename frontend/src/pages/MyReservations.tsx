@@ -16,11 +16,13 @@ type ResItem = {
   status: string;
 };
 
+// Comprueba si una reserva ya ha pasado comparando su fecha y hora con el momento actual
 function isPast(dateISO: string, timeHHMM: string) {
   const dt = new Date(`${dateISO}T${timeHHMM}:00`);
   return dt.getTime() < Date.now();
 }
 
+// Formatea una fecha ISO a formato español (dd/mm/aaaa)
 function formatDate(dateISO: string) {
   const d = new Date(dateISO);
   return d.toLocaleDateString("es-ES");
@@ -35,6 +37,7 @@ export default function MyReservations() {
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
 
+  // Agrupamos las reservas por fecha para mostrarlas por secciones
   const grouped = useMemo(() => {
     const map = new Map<string, ResItem[]>();
 
@@ -44,9 +47,11 @@ export default function MyReservations() {
       map.get(key)!.push(r);
     });
 
+    // Ordenamos de más reciente a más antigua
     return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1));
   }, [items]);
 
+  // Carga las reservas del usuario desde el backend
   async function load() {
     setMsg("");
     setError("");
@@ -62,6 +67,7 @@ export default function MyReservations() {
     }
   }
 
+  // Cancela una reserva por su ID y recarga la lista
   async function onCancel(id: number) {
     setMsg("");
     setError("");
@@ -75,12 +81,14 @@ export default function MyReservations() {
     }
   }
 
+  // Solo cargamos si el usuario está autenticado
   useEffect(() => {
     if (!isAuthenticated) return;
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
+  // Si no hay sesión, mostramos un aviso en vez de la lista
   if (!isAuthenticated) {
     return (
       <motion.div
@@ -151,6 +159,7 @@ export default function MyReservations() {
         {msg && <div className="alert alert-success">{msg}</div>}
         {error && <div className="alert alert-error">{error}</div>}
 
+        {/* Skeleton mientras carga la primera vez */}
         {loading && items.length === 0 ? (
           <div className="page-loading">
             <Loader text="Cargando reservas..." />
@@ -160,6 +169,7 @@ export default function MyReservations() {
             </div>
           </div>
         ) : items.length === 0 ? (
+          // Si no hay reservas mostramos un mensaje y botón para crear la primera
           <div className="reservation-card">
             <p className="page-empty">Aún no tienes reservas creadas.</p>
             <button
@@ -171,6 +181,7 @@ export default function MyReservations() {
             </button>
           </div>
         ) : (
+          // Mostramos las reservas agrupadas por fecha
           <div className="res-groups">
             {grouped.map(([date, list]) => (
               <section key={date} className="res-group">
@@ -196,6 +207,7 @@ export default function MyReservations() {
                               </p>
                             </div>
 
+                            {/* Etiqueta que indica si la reserva es futura o ya pasó */}
                             <span className={`reservation-status ${past ? "past" : "active"}`}>
                               {past ? "Pasada" : "Activa"}
                             </span>
@@ -204,6 +216,7 @@ export default function MyReservations() {
                           <div className="res-card-meta">
                             <span className="res-card-id">ID #{r.id}</span>
 
+                            {/* Solo se puede cancelar si la reserva es futura */}
                             <button
                               type="button"
                               className="btn-danger"
