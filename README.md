@@ -1,177 +1,248 @@
-# PADEX — Frontend
+<div align="center">
 
-Interfaz web del proyecto PADEX, una aplicación para reservar pistas de pádel.
-Desarrollada con React, Vite y TypeScript, conectada al backend mediante fetch y cookies.
+# 🎾 PADEX
 
----
+### Reserva pistas de pádel de forma rápida, sencilla y desde cualquier dispositivo.
 
-## ¿Qué hace este frontend?
+Una aplicación web completa para la gestión y reserva de pistas de pádel — con panel de usuario, consulta de disponibilidad en tiempo real y panel de administración.
 
-- Permite registrarse e iniciar sesión con email y contraseña
-- Muestra la disponibilidad de pistas en tiempo real para cualquier fecha
-- Permite reservar un tramo horario libre con un solo clic
-- Muestra al usuario todas sus reservas activas y pasadas, con opción de cancelar
-- Incluye un panel de administración para gestionar usuarios, reservas y pistas
-- Permite seleccionar el club al que pertenece el usuario, con mapa embebido
-- Personaliza la página de inicio mostrando el club del usuario si tiene uno asignado
+<br/>
 
----
+![Version](https://img.shields.io/badge/versión-1.0.0-blue?style=flat-square)
+![Node](https://img.shields.io/badge/Node.js-Express-339933?style=flat-square&logo=node.js&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)
+![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?style=flat-square&logo=mysql&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)
 
-## Tecnologías usadas
-
-| Tecnología | Para qué sirve |
-|---|---|
-| React 19 | Librería principal de la interfaz |
-| Vite | Herramienta de desarrollo y compilación |
-| TypeScript | Tipado estático para evitar errores |
-| React Router v7 | Navegación entre páginas |
-| Framer Motion | Animaciones de entrada y transiciones |
-| React Icons (Feather) | Iconos usados en toda la app |
-| Fetch API | Comunicación con el backend |
-| CSS personalizado | Estilos propios con variables CSS (tema oscuro) |
-
-No se ha usado ninguna librería de componentes como Material UI o Tailwind. Los estilos están hechos a mano con variables CSS para mantener un diseño consistente.
+</div>
 
 ---
 
-## Requisitos previos
+## 📸 Preview
+
+| Vista            | Pantalla                                   |
+| ---------------- | ------------------------------------------ |
+| Inicio           | ![Home](./assets/home.png)                 |
+| Reserva de pista | ![Reservar](./assets/reservar.png)         |
+| Mis reservas     | ![Mis reservas](./assets/mis-reservas.png) |
+| Panel de admin   | ![Admin](./assets/admin-dashboard.png)     |
+
+---
+
+## ✨ Funcionalidades
+
+**Usuario**
+
+- 🔐 Registro e inicio de sesión con JWT y cookies httpOnly
+- 🏟️ Selección de club y consulta de información del club
+- 📅 Reserva de pistas por fecha y hora con disponibilidad en tiempo real
+- 📋 Gestión de reservas propias (ver y cancelar)
+
+**Administrador**
+
+- 📊 Dashboard con estadísticas generales
+- 👥 Gestión completa de usuarios
+- 🗓️ Gestión de todas las reservas del club
+- 🎾 Gestión de pistas (altas, bajas, configuración)
+
+**Técnico**
+
+- ⚡ Rate limiting en login y registro (protección contra fuerza bruta)
+- 🌐 CORS configurable por entorno
+- 🔒 Rutas protegidas por rol (usuario / admin)
+- 💡 Generación dinámica de slots horarios según configuración del club
+
+---
+
+## 🧱 Estructura del proyecto
+
+```
+proyecto-fin-grado/
+├── backend/
+│   ├── middleware/
+│   │   ├── auth.js               # Verifica JWT en rutas de usuario
+│   │   └── adminAuth.js          # Verifica rol admin
+│   ├── routes/
+│   │   ├── auth.routes.js        # Login y registro
+│   │   ├── reservations.routes.js
+│   │   ├── admin.routes.js
+│   │   ├── clubs.routes.js
+│   │   └── users.routes.js
+│   ├── db.js                     # Pool de conexiones MySQL
+│   ├── index.js                  # Punto de entrada del servidor
+│   ├── .env.example
+│   └── package.json
+│
+└── frontend/
+    ├── src/
+    │   ├── components/           # Componentes reutilizables
+    │   │   └── admin/            # Componentes del panel admin
+    │   ├── pages/                # Páginas de usuario
+    │   │   └── admin/            # Páginas del panel admin
+    │   ├── context/              # AuthContext (sesión global)
+    │   ├── lib/                  # Clientes HTTP
+    │   ├── config/               # URL del backend
+    │   ├── types/                # Tipos TypeScript
+    │   └── App.tsx               # Enrutador principal
+    ├── .env.example
+    └── package.json
+```
+
+---
+
+## 🛠️ Tecnologías
+
+### Backend
+
+| Paquete            | Para qué se usa                      |
+| ------------------ | ------------------------------------ |
+| Express            | Framework del servidor HTTP          |
+| mysql2             | Conexión y consultas a MySQL         |
+| jsonwebtoken       | Generación y verificación de JWT     |
+| bcryptjs           | Hasheo de contraseñas                |
+| cookie-parser      | Lectura de cookies en las peticiones |
+| express-rate-limit | Protección contra fuerza bruta       |
+| dotenv             | Carga de variables de entorno        |
+| nodemon            | Reinicio automático en desarrollo    |
+
+### Frontend
+
+| Paquete            | Para qué se usa                  |
+| ------------------ | -------------------------------- |
+| React 19           | Librería principal de UI         |
+| TypeScript 5       | Tipado estático                  |
+| Vite 7             | Bundler y servidor de desarrollo |
+| React Router DOM 7 | Enrutado del cliente             |
+| Framer Motion      | Animaciones                      |
+| React Icons        | Iconos                           |
+
+> Los estilos están hechos a mano con CSS y variables propias. Sin Tailwind ni librerías de componentes.
+
+---
+
+## 🚀 Instalación
+
+### Requisitos previos
 
 - Node.js 18 o superior
-- El backend de PADEX corriendo en local (puerto 4000)
+- MySQL 8
+- npm
 
-> El frontend no funciona sin el backend activo. Asegúrate de arrancarlo primero.
-
----
-
-## Instalación
+### 1. Clona el repositorio
 
 ```bash
-cd padel-frontend
+git clone https://github.com/RaadOtman/proyecto-fin-grado
+cd proyecto-fin-grado
+```
+
+### 2. Configura el backend
+
+```bash
+cd backend
 npm install
-```
-
----
-
-## Configuración
-
-El frontend se conecta al backend usando la variable de entorno `VITE_API_URL`.
-Si no la defines, usa `http://localhost:4000` por defecto, que es la configuración habitual en local.
-
-Si necesitas cambiar la URL del backend, crea un archivo `.env` en la raíz del frontend:
-
-```
-VITE_API_URL=http://localhost:4000
-```
-
-En la mayoría de los casos **no hace falta crear este archivo**: con el backend corriendo en el puerto 4000 funciona directamente.
-
----
-
-## Arrancar el frontend
-
-```bash
+cp .env.example .env
+# Edita .env con tus datos de base de datos y JWT
 npm run dev
 ```
 
-La aplicación estará disponible en:
+El servidor arrancará en `http://localhost:4000`
 
+### 3. Configura el frontend
+
+```bash
+cd ../frontend
+npm install
+cp .env.example .env
+# Edita .env con la URL del backend
+npm run dev
 ```
-http://localhost:5173
+
+La app arrancará en `http://localhost:5173`
+
+> El frontend necesita el backend activo para funcionar. Arranca primero el backend.
+
+---
+
+## 🔐 Variables de entorno
+
+### Backend — `backend/.env`
+
+```env
+PORT=               # Puerto del servidor (ej: 4000)
+NODE_ENV=           # development o production
+
+DB_HOST=            # Host de MySQL (ej: 127.0.0.1)
+DB_PORT=            # Puerto de MySQL (ej: 3306)
+DB_USER=            # Usuario de MySQL
+DB_PASSWORD=        # Contraseña de MySQL
+DB_NAME=            # Nombre de la base de datos
+
+JWT_SECRET=         # Clave secreta para firmar los tokens
+
+CORS_ORIGIN=        # URL del frontend en producción
 ```
 
----
+### Frontend — `frontend/.env`
 
-## Cómo funciona con el backend
-
-El frontend consume la API REST del backend mediante `fetch`. Todas las llamadas están centralizadas en dos archivos:
-
-- `src/lib/apiClient.ts` — rutas públicas y de usuario
-- `src/lib/adminApiClient.ts` — rutas del panel de administración
-
-**La autenticación funciona con cookies HTTP-only.** Al hacer login, el backend establece una cookie llamada `padel_token` que el navegador envía automáticamente en cada petición. El frontend no puede leer esa cookie directamente (es HTTP-only), pero la gestión de sesión se mantiene en el contexto `AuthContext`.
-
-Para que las cookies funcionen bien en local, el backend y el frontend deben correr en `localhost` (no en IPs distintas).
-
----
-
-## Flujo básico de uso
-
-1. Abrir `http://localhost:5173`
-2. Registrarse con un email y contraseña, o usar los usuarios de prueba
-3. Iniciar sesión
-4. (Opcional) Ir a **Mi club** y seleccionar el club al que perteneces
-5. Ir a **Reservar pista**, elegir una fecha y hacer clic en un tramo libre
-6. Consultar tus reservas en **Mis reservas** y cancelar si es necesario
-7. Si eres admin, acceder al **Panel de administración** desde el menú
-
----
-
-## Usuarios de prueba
-
-Los mismos que en el backend:
-
-| Rol | Email | Contraseña |
-|---|---|---|
-| Administrador | admin@demo.com | 123456 |
-| Usuario normal | user@demo.com | 123456 |
-
----
-
-## Estructura del proyecto
-
-```
-src/
-├── components/              # Componentes reutilizables
-│   ├── admin/               # Componentes exclusivos del panel de admin
-│   ├── Header.tsx           # Barra de navegación superior
-│   ├── Sidebar.tsx          # Panel lateral de la sección de usuario
-│   ├── Loader.tsx           # Indicador de carga
-│   ├── SkeletonCard.tsx     # Tarjetas animadas mientras carga
-│   └── ProtectedRoute.tsx   # Ruta que requiere sesión iniciada
-├── config/
-│   └── api.ts               # URL base del backend
-├── context/
-│   └── AuthContext.tsx      # Estado global: sesión, rol, club del usuario
-├── lib/
-│   ├── apiClient.ts         # Llamadas al backend (usuario)
-│   └── adminApiClient.ts    # Llamadas al backend (administración)
-├── pages/                   # Una página por sección
-│   ├── Home.tsx             # Página principal con hero dinámico del club
-│   ├── Login.tsx            # Inicio de sesión
-│   ├── Register.tsx         # Registro de cuenta
-│   ├── Reserve.tsx          # Reservar pista
-│   ├── MyReservations.tsx   # Mis reservas
-│   ├── MiClub.tsx           # Selección y detalle del club
-│   └── admin/               # Páginas del panel de administración
-│       ├── AdminDashboard.tsx
-│       ├── AdminUsuarios.tsx
-│       ├── AdminReservas.tsx
-│       └── AdminPistas.tsx
-├── App.tsx                  # Definición de todas las rutas
-├── main.tsx                 # Punto de entrada de la aplicación
-├── styles.css               # Todos los estilos de la app
-└── index.css                # Reset y estilos base
+```env
+VITE_API_URL=       # URL del backend (ej: http://localhost:4000)
 ```
 
 ---
 
-## Notas para pruebas en local
+## 📸 Capturas de pantalla
 
-- **El backend debe estar corriendo** antes de abrir el frontend. Si no, todas las llamadas a la API fallarán.
-- El frontend espera el backend en `http://localhost:4000`. Si lo arrancas en otro puerto, crea un `.env` con `VITE_API_URL=http://localhost:XXXX`.
-- Si el login falla sin mensaje de error claro, revisa que el backend esté activo y que CORS esté configurado para `http://localhost:5173`.
-- Las cookies de sesión requieren que frontend y backend estén en `localhost`. No mezcles `localhost` con `127.0.0.1`.
-- El panel de administración solo es accesible con el usuario `admin@demo.com` o cualquier cuenta con rol `admin` en la base de datos.
-- Si cambias de cuenta y la sesión no se limpia bien, prueba a borrar las cookies del navegador manualmente.
+### 🏠 Inicio
+
+![Home](./assets/home.png)
+
+### 📅 Reservar pista
+
+![Reservar](./assets/reservar.png)
+
+### 📋 Mis reservas
+
+![Mis reservas](./assets/mis-reservas.png)
+
+### 🏟️ Mi club
+
+![Mi club](./assets/mi-club.png)
+
+### 📊 Admin — Dashboard
+
+![Admin Dashboard](./assets/admin-dashboard.png)
+
+### 👥 Admin — Usuarios
+
+![Admin Usuarios](./assets/admin-usuarios.png)
+
+### 🗓️ Admin — Reservas
+
+![Admin Reservas](./assets/admin-reservas.png)
+
+### 🎾 Admin — Pistas
+
+![Admin Pistas](./assets/admin-pistas.png)
 
 ---
 
-## Posibles mejoras futuras
+## 🎯 Objetivo del proyecto
 
-- Validaciones de formulario más completas en el lado del cliente
-- Página de perfil para cambiar nombre o contraseña
-- Calendario visual para ver todas las reservas del club de un vistazo
-- Estadísticas más detalladas en el panel de admin (horas más reservadas, etc.)
-- Modo claro disponible además del tema oscuro actual
-- Tests de componentes con Vitest o React Testing Library
-- Despliegue automático en Vercel con variables de entorno configuradas
+PADEX es mi proyecto de fin de grado del ciclo superior de Desarrollo de Aplicaciones Web (DAW).
+
+La idea surgió de algo simple: muchos clubs de pádel todavía gestionan las reservas por teléfono o con herramientas muy básicas. Quería construir algo que solucionara eso de verdad.
+
+He intentado ir más allá de lo que se pide en clase: autenticación con cookies httpOnly, panel de administración completo, disponibilidad dinámica de pistas según la configuración del club, y buenas prácticas de seguridad básicas. No es un proyecto perfecto, pero sí uno en el que he aprendido mucho.
+
+---
+
+## 👨‍💻 Autor
+
+**Otman Raad**
+Proyecto de Fin de Grado · Ciclo Superior DAW
+
+---
+
+<div align="center">
+  <sub>Hecho con ☕ y muchas horas de depuración</sub>
+</div>
