@@ -47,6 +47,7 @@
 <td width="33%" valign="top">
 
 ### 👤 Usuario
+
 - 🔐 Registro e inicio de sesión
 - 🏟️ Selección y consulta de club
 - 📅 Reserva de pistas por fecha y hora
@@ -57,6 +58,7 @@
 <td width="33%" valign="top">
 
 ### 🛡️ Administrador
+
 - 📊 Dashboard con estadísticas
 - 👥 Gestión de usuarios
 - 🗓️ Gestión de todas las reservas
@@ -66,6 +68,7 @@
 <td width="33%" valign="top">
 
 ### ⚙️ Técnico
+
 - 🔒 JWT con cookies httpOnly
 - ⚡ Rate limiting (fuerza bruta)
 - 🌐 CORS configurable
@@ -86,29 +89,29 @@
 
 ### Backend
 
-| Paquete | Uso |
-|---|---|
-| Express | Servidor HTTP |
-| mysql2 | Conexión a MySQL |
-| jsonwebtoken | Autenticación JWT |
-| bcryptjs | Hasheo de contraseñas |
-| cookie-parser | Gestión de cookies |
+| Paquete            | Uso                       |
+| ------------------ | ------------------------- |
+| Express            | Servidor HTTP             |
+| mysql2             | Conexión a MySQL          |
+| jsonwebtoken       | Autenticación JWT         |
+| bcryptjs           | Hasheo de contraseñas     |
+| cookie-parser      | Gestión de cookies        |
 | express-rate-limit | Protección contra ataques |
-| dotenv | Variables de entorno |
+| dotenv             | Variables de entorno      |
 
 </td>
 <td width="50%" valign="top">
 
 ### Frontend
 
-| Paquete | Uso |
-|---|---|
-| React 19 | Librería de UI |
-| TypeScript 5 | Tipado estático |
-| Vite 7 | Bundler y dev server |
-| React Router DOM 7 | Enrutado cliente |
-| Framer Motion | Animaciones |
-| React Icons | Iconos |
+| Paquete            | Uso                  |
+| ------------------ | -------------------- |
+| React 19           | Librería de UI       |
+| TypeScript 5       | Tipado estático      |
+| Vite 7             | Bundler y dev server |
+| React Router DOM 7 | Enrutado cliente     |
+| Framer Motion      | Animaciones          |
+| React Icons        | Iconos               |
 
 > Estilos 100% a mano con CSS y variables propias. Sin Tailwind ni librerías de componentes.
 
@@ -241,14 +244,6 @@ VITE_API_URL=       # URL del backend (ej: http://localhost:4000)
 ### 👥 Admin — Usuarios
 
 <img src="./assets/admin-usuarios.png" width="100%" alt="Gestión de usuarios" />
-
-### 🗓️ Admin — Reservas
-
-<img src="./assets/admin-reservas.png" width="100%" alt="Gestión de reservas" />
-
-### 🎾 Admin — Pistas
-
-<img src="./assets/admin-pistas.png" width="100%" alt="Gestión de pistas" />
 
 ---
 
