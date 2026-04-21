@@ -365,6 +365,33 @@ a:hover {
   gap: 6px;
 }
 
+.sidebar-club-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sidebar-club-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.sidebar-club-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: var(--green);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.sidebar-club-link:hover {
+  opacity: 0.8;
+}
+
 .sidebar-select {
   font-size: 12px;
   padding: 6px 8px;
@@ -2599,4 +2626,293 @@ a.button-secondary {
   .club-map {
     height: 260px;
   }
+}
+
+/* ── MiClub: mejoras visuales PRO ── */
+
+/* Transición más suave y efecto hover más pronunciado */
+.club-card {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease,
+              transform 0.2s ease, background 0.2s ease;
+}
+
+.club-card:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  transform: translateY(-3px) scale(1.01);
+}
+
+/* Seleccionado: tinte verde suave + glow */
+.club-card-selected {
+  background: rgba(34, 197, 94, 0.05) !important;
+  border-color: var(--green) !important;
+  box-shadow: 0 0 0 1px var(--green),
+              0 6px 22px rgba(34, 197, 94, 0.18) !important;
+}
+
+/* Wrapper imagen card: zoom suave al hacer hover en la card */
+.club-card-img-wrap {
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.club-card-img-wrap .club-card-image {
+  transition: transform 0.35s ease;
+}
+
+.club-card:hover .club-card-img-wrap .club-card-image {
+  transform: scale(1.06);
+}
+
+/* Wrapper banner detalle: overlay oscuro + hover leve */
+.club-detail-banner-wrap {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.club-detail-banner-wrap .club-detail-banner {
+  border-bottom: none;
+  transition: transform 0.4s ease;
+  display: block;
+}
+
+.club-detail-banner-wrap:hover .club-detail-banner {
+  transform: scale(1.025);
+}
+
+/* Gradient overlay sobre el banner */
+.club-detail-banner-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 35%,
+    rgba(0, 0, 0, 0.6) 100%
+  );
+  pointer-events: none;
+}
+
+/* Línea verde en la barra de guardado */
+.club-save-bar {
+  border-left: 3px solid var(--green);
+}
+
+/* Botón Maps: hover más rico */
+.club-maps-btn:hover {
+  opacity: 1;
+  background: #16a34a;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
+}
+
+/* ═══════════════════════════════════════
+   SIDEBAR PRO — mejoras visuales
+═══════════════════════════════════════ */
+
+/* ── Cabecera ── */
+.sidebar-header {
+  padding: 4px 10px 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+
+.sidebar-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
+}
+
+.sidebar-subtitle {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+/* ── Links de navegación ── */
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px 8px 12px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  font-weight: 450;
+  color: var(--text-2);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition: color 0.2s ease, background 0.2s ease,
+              transform 0.2s ease, border-color 0.2s ease;
+}
+
+.sidebar-link:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+  transform: translateX(2px);
+}
+
+.sidebar-link-active {
+  color: var(--green) !important;
+  background: rgba(34, 197, 94, 0.08) !important;
+  border-left-color: var(--green) !important;
+  font-weight: 600;
+}
+
+/* ── Títulos de sección ── */
+.sidebar-section-title {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-3);
+  padding: 16px 12px 5px;
+}
+
+/* ── Botones acceso rápido ── */
+.sidebar-button {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--r-md);
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sidebar-button:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar-button:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+/* Botón primario (nueva reserva) */
+.sidebar-button.primary {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.2);
+  color: var(--green);
+  font-weight: 600;
+}
+
+.sidebar-button.primary:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.14);
+  color: var(--green);
+  box-shadow: 0 2px 12px rgba(34, 197, 94, 0.15);
+}
+
+/* ── Bloques widget ── */
+.sidebar-block {
+  margin-top: 4px;
+  padding: 12px;
+  border-radius: var(--r-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+.sidebar-block-title {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-3);
+  margin-bottom: 10px;
+}
+
+/* ── Stats widget ── */
+.sidebar-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+}
+
+.sidebar-stat-label {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.sidebar-stat-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+/* ── Mi club widget ── */
+.sidebar-club-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Dot de estado: verde = activo, gris = sin club */
+.sidebar-club-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.55);
+}
+
+.sidebar-club-dot.inactive {
+  background: var(--text-3);
+  box-shadow: none;
+}
+
+.sidebar-club-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-club-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.sidebar-club-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: var(--green);
+  cursor: pointer;
+  text-decoration: underline;
+  transition: opacity 0.15s;
+}
+
+.sidebar-club-link:hover {
+  opacity: 0.75;
+}
+
+/* ── Footer ── */
+.sidebar-footer {
+  margin-top: auto;
+  padding: 12px 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-footer p {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
+  text-align: center;
 }

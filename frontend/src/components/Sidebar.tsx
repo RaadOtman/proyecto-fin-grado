@@ -1,25 +1,11 @@
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
-type ClubOption = {
-  id: string;
-  name: string;
-};
-
-const CLUBS: ClubOption[] = [
-  { id: 'none', name: 'Sin club asociado (demo)' },
-  { id: 'padel-center', name: 'Padel Center Ciudad' },
-  { id: 'club-norte', name: 'Club Pádel Norte' },
-  { id: 'indoor-sur', name: 'Indoor Pádel Sur' },
-];
-
 export default function Sidebar() {
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, clubName } = useAuth();
   const navigate = useNavigate();
-
-  const [selectedClub, setSelectedClub] = useState<string>('none');
   const [now, setNow] = useState<string>('');
 
   const getClassName = ({ isActive }: { isActive: boolean }) =>
@@ -30,10 +16,6 @@ export default function Sidebar() {
     month: 'short',
   });
 
-  const selectedClubName =
-    CLUBS.find((c) => c.id === selectedClub)?.name ?? CLUBS[0].name;
-
-  // Reloj simple
   useEffect(() => {
     const updateTime = () => {
       setNow(
@@ -47,25 +29,6 @@ export default function Sidebar() {
     const id = setInterval(updateTime, 60_000);
     return () => clearInterval(id);
   }, []);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('padel_club');
-      if (stored) setSelectedClub(stored);
-    } catch {
-      
-    }
-  }, []);
-
-  function handleChangeClub(e: ChangeEvent<HTMLSelectElement>) {
-    const value = e.target.value;
-    setSelectedClub(value);
-    try {
-      localStorage.setItem('padel_club', value);
-    } catch {
-      // ignoramos errores
-    }
-  }
 
   return (
     <motion.aside
@@ -105,7 +68,7 @@ export default function Sidebar() {
 
         {!isAuthenticated && (
           <span className="sidebar-hint">
-            Inicia sesión o entra como invitado para acceder a las reservas.
+            Inicia sesión para acceder a las reservas.
           </span>
         )}
 
@@ -113,9 +76,9 @@ export default function Sidebar() {
         <div className="sidebar-actions">
           <motion.button
             type="button"
-            className="sidebar-button"
-            whileHover={{ scale: isAuthenticated ? 1.02 : 1 }}
-            whileTap={{ scale: isAuthenticated ? 0.98 : 1 }}
+            className="sidebar-button primary"
+            whileHover={{ scale: isAuthenticated ? 1.01 : 1 }}
+            whileTap={{ scale: isAuthenticated ? 0.99 : 1 }}
             onClick={() => navigate('/reservar')}
             disabled={!isAuthenticated}
           >
@@ -133,11 +96,6 @@ export default function Sidebar() {
             Ver mis reservas
           </motion.button>
         </div>
-
-        <div className="sidebar-section-title">Próximas mejoras</div>
-        <div className="sidebar-tag">Club asociado</div>
-        <div className="sidebar-tag">Panel del club</div>
-        <div className="sidebar-tag">Estadísticas de uso</div>
       </nav>
 
       <div className="sidebar-block">
@@ -154,33 +112,34 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <div className="sidebar-block">
-        <div className="sidebar-block-title">Club (demo)</div>
-        <label className="sidebar-club-label">
-          Club seleccionado
-          <select
-            value={selectedClub}
-            onChange={handleChangeClub}
-            className="sidebar-select"
-          >
-            {CLUBS.map((club) => (
-              <option key={club.id} value={club.id}>
-                {club.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <p className="sidebar-project-text">
-          En la versión conectada al backend, este selector se enlazará con los clubes reales del
-          sistema. Actualmente se guarda solo en tu navegador.
-        </p>
-        <p className="sidebar-project-text" style={{ marginTop: 4 }}>
-          Club actual: <strong>{selectedClubName}</strong>
-        </p>
-      </div>
+      {isAuthenticated && (
+        <div className="sidebar-block">
+          <div className="sidebar-block-title">Mi club</div>
+          {clubName ? (
+            <div className="sidebar-club-card">
+              <span className="sidebar-club-dot" />
+              <p className="sidebar-club-name">{clubName}</p>
+            </div>
+          ) : (
+            <div className="sidebar-club-card">
+              <span className="sidebar-club-dot inactive" />
+              <p className="sidebar-club-empty">
+                Sin club —{' '}
+                <button
+                  type="button"
+                  className="sidebar-club-link"
+                  onClick={() => navigate('/mi-club')}
+                >
+                  seleccionar
+                </button>
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="sidebar-footer">
-        <p>Demo académica – Padel Booking</p>
+        <p>Padel Booking</p>
       </div>
     </motion.aside>
   );

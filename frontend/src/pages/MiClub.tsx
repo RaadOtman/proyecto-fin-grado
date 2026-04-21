@@ -15,14 +15,18 @@ type Club = {
   court_count: number | null;
 };
 
-// Variante de animación reutilizable para que los elementos aparezcan suavemente
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
   show:   { opacity: 1, y: 0, transition: { duration: 0.25 } },
 };
 
-// Convierte una URL normal de Google Maps a una URL de embed para el iframe
-// Si ya es embed la deja como está
+function getImageUrl(path: string | null): string {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  const slash = path.startsWith("/") ? "" : "/";
+  return `${window.location.origin}${slash}${path}`;
+}
+
 function toEmbedUrl(url: string): string {
   if (url.includes("/maps/embed") || url.includes("output=embed")) return url;
   if (url.includes("google.com/maps") || url.includes("maps.google.com")) {
@@ -33,64 +37,60 @@ function toEmbedUrl(url: string): string {
 }
 
 export default function MiClub() {
-  // Sacamos del contexto el id del usuario y su club actual guardado
   const { userId, clubId, updateClub } = useAuth();
 
   const [clubs,    setClubs   ] = useState<Club[]>([]);
   const [loading,  setLoading ] = useState(true);
   const [saving,   setSaving  ] = useState(false);
   const [error,    setError   ] = useState("");
-  const [msg,      setMsg     ] = useState("");
-  // Este estado guarda el club que el usuario tiene marcado en la UI (no el guardado todavía)
   const [selected, setSelected] = useState<number | "">(clubId ?? "");
+  const [msg,      setMsg     ] = useState("");
 
-  // Cargamos la lista de clubes al entrar en la página
   useEffect(() => {
     getClubs()
-      .then((d) => setClubs(d.clubs || []))
+      .then((d) => setClubs(d.clubs ?? []))
       .catch(() => setError("No se pudieron cargar los clubs."))
       .finally(() => setLoading(false));
   }, []);
 
-  // Si el club del usuario cambia desde fuera (por ejemplo después de guardar), actualizamos la selección
   useEffect(() => {
     setSelected(clubId ?? "");
   }, [clubId]);
 
-  // El club que se muestra en el panel de detalle es el que está seleccionado en la UI
-  const previewClub = selected !== "" ? (clubs.find((c) => c.id === selected) ?? null) : null;
-  // Hay cambios pendientes si la selección actual es diferente a la guardada en el backend
-  const hasChanged  = selected !== (clubId ?? "");
+  const previewClub = selected !== ""
+    ? (clubs.find((c: Club) => c.id === selected) ?? null)
+    : null;
 
-  // Llama al backend para guardar el club seleccionado y actualiza el contexto
+  const hasChanged = selected !== (clubId ?? "");
+
+  function handleSelect(id: number | "") {
+    setMsg("");
+    setError("");
+    setSelected(id);
+  }
+
   async function handleSave() {
     if (!userId) return;
     setSaving(true);
     setError("");
     setMsg("");
     try {
-      await patchUserClub(userId, selected === "" ? null : Number(selected));
-      updateClub(selected === "" ? null : Number(selected));
+      const newClubId   = selected === "" ? null : Number(selected);
+      const newClubName = previewClub?.name ?? null;
+      await patchUserClub(userId, newClubId);
+      updateClub(newClubId, newClubName);
       setMsg("Club actualizado correctamente.");
-    } catch (e: any) {
-      setError(e?.message || "Error al guardar el club.");
+    } catch {
+      setError("No se pudo guardar el club. Inténtalo de nuevo.");
     } finally {
       setSaving(false);
     }
   }
 
-  // Descarta los cambios y vuelve al club guardado
   function handleCancel() {
     setSelected(clubId ?? "");
     setMsg("");
     setError("");
-  }
-
-  // Marca un club como seleccionado en la UI (aún no se guarda)
-  function handleSelect(id: number | "") {
-    setMsg("");
-    setError("");
-    setSelected(id);
   }
 
   return (
@@ -100,7 +100,6 @@ export default function MiClub() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
     >
-      {/* Header */}
       <div className="page-header-row">
         <div>
           <h1 className="page-title">Mi club</h1>
@@ -122,7 +121,6 @@ export default function MiClub() {
             </p>
 
             <div className="club-grid">
-              {/* Opción para desvincular el club actual */}
               <button
                 type="button"
                 className={`club-card club-card-none${selected === "" ? " club-card-selected" : ""}`}
@@ -132,8 +130,7 @@ export default function MiClub() {
                 <span>Sin club</span>
               </button>
 
-              {/* Una card por cada club disponible */}
-              {clubs.map((club) => {
+              {clubs.map((club: Club) => {
                 const isSelected = selected === club.id;
                 return (
                   <button
@@ -143,11 +140,16 @@ export default function MiClub() {
                     onClick={() => handleSelect(club.id)}
                   >
                     {club.image_url ? (
-                      <img
-                        src={club.image_url}
-                        alt={club.name}
-                        className="club-card-image"
-                      />
+                      <div className="club-card-img-wrap">
+                        <img
+                          src={getImageUrl(club.image_url)}
+                          alt={club.name}
+                          className="club-card-image"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).parentElement!.style.display = "none";
+                          }}
+                        />
+                      </div>
                     ) : (
                       <div className="club-card-image-placeholder">
                         <FiGrid size={22} />
@@ -163,15 +165,12 @@ export default function MiClub() {
                             {club.city}
                           </p>
                         </div>
-
-                        {/* El check verde aparece solo si este club está seleccionado */}
                         {isSelected && (
                           <span className="club-card-check">
                             <FiCheck size={11} />
                           </span>
                         )}
                       </div>
-
                       {club.court_count != null && (
                         <span className="badge badge-neutral club-card-badge">
                           {club.court_count} pistas
@@ -183,7 +182,6 @@ export default function MiClub() {
               })}
             </div>
 
-            {/* La barra de guardar solo aparece si hay cambios sin guardar */}
             <AnimatePresence>
               {hasChanged && (
                 <motion.div
@@ -193,21 +191,11 @@ export default function MiClub() {
                   exit={{ opacity: 0, y: 6 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <button
-                    type="button"
-                    className="button"
-                    onClick={handleSave}
-                    disabled={saving}
-                  >
+                  <button type="button" className="button" onClick={handleSave} disabled={saving}>
                     <FiCheck size={14} />
                     {saving ? "Guardando..." : "Guardar selección"}
                   </button>
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    onClick={handleCancel}
-                    disabled={saving}
-                  >
+                  <button type="button" className="button-secondary" onClick={handleCancel} disabled={saving}>
                     <FiX size={14} />
                     Cancelar
                   </button>
@@ -217,7 +205,6 @@ export default function MiClub() {
           </div>
 
           {/* ── Detalle del club seleccionado ── */}
-          {/* AnimatePresence con mode="wait" hace que el antiguo desaparezca antes de que entre el nuevo */}
           <AnimatePresence mode="wait">
             {previewClub ? (
               <motion.div
@@ -229,11 +216,13 @@ export default function MiClub() {
                 exit={{ opacity: 0, transition: { duration: 0.15 } }}
               >
                 {previewClub.image_url ? (
-                  <img
-                    src={previewClub.image_url}
-                    alt={previewClub.name}
-                    className="club-detail-banner"
-                  />
+                  <div className="club-detail-banner-wrap">
+                    <img
+                      src={getImageUrl(previewClub.image_url)}
+                      alt={previewClub.name}
+                      className="club-detail-banner"
+                    />
+                  </div>
                 ) : (
                   <div className="club-detail-banner-placeholder">
                     <FiGrid size={32} />
@@ -271,9 +260,8 @@ export default function MiClub() {
                   )}
                 </div>
 
-                {/* Mapa embebido de Google Maps usando la URL del club */}
-                <div className="club-map">
-                  {previewClub.maps_url ? (
+                {previewClub.maps_url && (
+                  <div className="club-map">
                     <iframe
                       src={toEmbedUrl(previewClub.maps_url)}
                       title={`Mapa de ${previewClub.name}`}
@@ -281,13 +269,10 @@ export default function MiClub() {
                       referrerPolicy="no-referrer-when-downgrade"
                       allowFullScreen
                     />
-                  ) : (
-                    <div className="club-map-fallback">Ubicación no disponible</div>
-                  )}
-                </div>
+                  </div>
+                )}
               </motion.div>
             ) : (
-              // Si no hay club seleccionado mostramos un estado vacío con instrucciones
               <motion.div
                 key="empty"
                 className="section-panel club-empty-state"
