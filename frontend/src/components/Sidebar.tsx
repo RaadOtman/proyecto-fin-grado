@@ -139,7 +139,7 @@ export default function Sidebar() {
       )}
 
       <div className="sidebar-footer">
-        <p>Padel Booking</p>
+        <p>Padex</p>
       </div>
     </motion.aside>
   );
