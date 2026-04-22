@@ -22,6 +22,13 @@ router.post("/register", async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ ok: false, error: "Email y contraseña obligatorios" });
     }
+
+    // Comprobamos que el email tiene un formato mínimamente válido
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ ok: false, error: "El email no tiene un formato válido" });
+    }
+
     if (password.length < 4) {
       return res.status(400).json({ ok: false, error: "La contraseña debe tener mínimo 4 caracteres" });
     }

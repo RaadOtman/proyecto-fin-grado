@@ -101,6 +101,17 @@ router.post("/", auth, async (req, res) => {
     // Calculamos la hora de fin sumando la duración del slot
     const end_time = addMinutes(normalizedStart, slotMinutes);
 
+    // Comprobamos si ya existe una reserva confirmada en esta franja antes de insertar
+    const [conflict] = await pool.query(
+      `SELECT id FROM reservations
+       WHERE court_id = ? AND reservation_date = ? AND start_time = ? AND status = 'confirmed'
+       LIMIT 1`,
+      [court_id, reservation_date, normalizedStart]
+    );
+    if (conflict.length > 0) {
+      return res.status(409).json({ ok: false, error: "Esta franja ya está ocupada" });
+    }
+
     // Insertamos la reserva — la constraint UNIQUE de la tabla evita dobles reservas
     const [result] = await pool.query(
       `INSERT INTO reservations
@@ -115,9 +126,9 @@ router.post("/", auth, async (req, res) => {
       reservationId: result.insertId,
     });
   } catch (e) {
-    // Si hay duplicado la base de datos lanza ER_DUP_ENTRY
+    // Por si acaso hay una condición de carrera, la DB también lo detecta
     if (e.code === "ER_DUP_ENTRY") {
-      return res.status(409).json({ ok: false, error: "Ese tramo ya está ocupado" });
+      return res.status(409).json({ ok: false, error: "Esta franja ya está ocupada" });
     }
     console.error("CREATE RESERVATION ERROR:", e);
     return res.status(500).json({ ok: false, error: "Error creando reserva" });

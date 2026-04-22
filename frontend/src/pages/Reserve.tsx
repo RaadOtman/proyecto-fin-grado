@@ -34,8 +34,23 @@ export default function Reserve() {
   const [date, setDate] = useState(todayISO());
   const [data, setData] = useState<Availability | null>(null);
   const [loading, setLoading] = useState(false);
+  const [reserving, setReserving] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
+
+  // El mensaje de éxito desaparece solo después de 4 segundos
+  useEffect(() => {
+    if (!msg) return;
+    const t = setTimeout(() => setMsg(""), 4000);
+    return () => clearTimeout(t);
+  }, [msg]);
+
+  // El mensaje de error desaparece solo después de 5 segundos
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(""), 5000);
+    return () => clearTimeout(t);
+  }, [error]);
 
   // Sacamos las pistas del objeto de disponibilidad
   const courts = useMemo(() => data?.courts || [], [data]);
@@ -74,6 +89,8 @@ export default function Reserve() {
       return;
     }
 
+    // Bloqueamos los botones mientras se procesa la petición (evita doble clic)
+    setReserving(true);
     try {
       const r = await createReservation({ court_id, reservation_date: date, start_time });
       setMsg(`Reserva creada correctamente (ID ${r.reservationId})`);
@@ -81,6 +98,8 @@ export default function Reserve() {
       await load();
     } catch (e: any) {
       setError(e?.message || "No se pudo crear la reserva");
+    } finally {
+      setReserving(false);
     }
   }
 
@@ -157,7 +176,7 @@ export default function Reserve() {
                         key={slot.time}
                         type="button"
                         onClick={() => reserve(court.id, slot.time)}
-                        disabled={!isFree}
+                        disabled={!isFree || reserving}
                         className={`slot-btn ${isFree ? "slot-free" : "slot-busy slot-disabled"}`}
                         title={isFree ? "Disponible" : "Ocupado"}
                       >
