@@ -83,10 +83,37 @@ function toHHMM(t) {
   return String(t || "").slice(0, 5);
 }
 
-async function getTimeSlots() {
-  const [[cfg]] = await pool.query(
-    "SELECT opening_time, closing_time, slot_minutes FROM club_settings LIMIT 1"
+async function getDefaultClubId() {
+  const [rows] = await pool.query(
+    "SELECT id FROM clubs WHERE name = 'PADEX Club' ORDER BY id ASC LIMIT 1"
   );
+  if (rows.length > 0) return rows[0].id;
+
+  const [result] = await pool.query(
+    `INSERT INTO clubs (name, city, address, description, image_url, maps_url, court_count)
+     VALUES ('PADEX Club', 'Sin ciudad', NULL, 'Club por defecto migrado para compatibilidad multi-club.', NULL, NULL, 0)`
+  );
+  return result.insertId;
+}
+
+async function resolvePublicClubId(req) {
+  const requestedClubId = Number(req.query.club_id || req.query.clubId);
+  if (requestedClubId) {
+    const [rows] = await pool.query(
+      "SELECT id FROM clubs WHERE id = ? LIMIT 1",
+      [requestedClubId]
+    );
+    if (rows.length > 0) return requestedClubId;
+  }
+  return getDefaultClubId();
+}
+
+async function getTimeSlots(clubId) {
+  const [[cfg]] = await pool.query(
+    "SELECT opening_time, closing_time, slot_minutes FROM club_settings WHERE club_id = ? LIMIT 1",
+    [clubId]
+  );
+  if (!cfg) return [];
   const slots = [];
   let [h, m] = cfg.opening_time.split(":").map(Number);
   const [closeH, closeM] = cfg.closing_time.split(":").map(Number);
@@ -126,10 +153,12 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 // ── GET /courts ───────────────────────────────────────────────
-app.get("/courts", async (_req, res) => {
+app.get("/courts", async (req, res) => {
   try {
+    const clubId = await resolvePublicClubId(req);
     const [courts] = await pool.query(
-      "SELECT id, name, type FROM courts WHERE status = 'active' ORDER BY id"
+      "SELECT id, name, type FROM courts WHERE club_id = ? AND status = 'active' ORDER BY id",
+      [clubId]
     );
     res.json({ courts });
   } catch (error) {
@@ -142,23 +171,26 @@ app.get("/courts", async (_req, res) => {
 app.get("/availability", async (req, res) => {
   try {
     const date = req.query.date;
+    const clubId = await resolvePublicClubId(req);
 
     if (!date) {
       return res.status(400).json({ error: 'Falta el parámetro "date" (YYYY-MM-DD)' });
     }
 
     const [activeCourts] = await pool.query(
-      "SELECT id, name, type FROM courts WHERE status = 'active' ORDER BY id"
+      "SELECT id, name, type FROM courts WHERE club_id = ? AND status = 'active' ORDER BY id",
+      [clubId]
     );
 
-    const timeSlots = await getTimeSlots();
+    const timeSlots = await getTimeSlots(clubId);
 
     const [rows] = await pool.query(
       `SELECT court_id, start_time
        FROM   reservations
-       WHERE  reservation_date = ?
+       WHERE  club_id = ?
+         AND  reservation_date = ?
          AND  status = 'confirmed'`,
-      [date]
+      [clubId, date]
     );
 
     const occupied = new Map();

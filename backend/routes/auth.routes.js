@@ -5,6 +5,19 @@ const pool    = require("../db");
 
 const router = express.Router();
 
+async function getDefaultClubId() {
+  const [existing] = await pool.query(
+    "SELECT id FROM clubs WHERE name = 'PADEX Club' ORDER BY id ASC LIMIT 1"
+  );
+  if (existing.length > 0) return existing[0].id;
+
+  const [result] = await pool.query(
+    `INSERT INTO clubs (name, city, address, description, image_url, maps_url, court_count)
+     VALUES ('PADEX Club', 'Sin ciudad', NULL, 'Club por defecto migrado para compatibilidad multi-club.', NULL, NULL, 0)`
+  );
+  return result.insertId;
+}
+
 // ── POST /auth/register ───────────────────────────────────────
 // Registra un usuario nuevo con email, contraseña y nombre opcional
 router.post("/register", async (req, res) => {
@@ -45,9 +58,11 @@ router.post("/register", async (req, res) => {
     // Ciframos la contraseña antes de guardarla (nunca se guarda en texto plano)
     const password_hash = await bcrypt.hash(password, 10);
 
+    const clubId = await getDefaultClubId();
+
     await pool.query(
-      "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-      [name, email, password_hash]
+      "INSERT INTO users (name, email, password_hash, club_id) VALUES (?, ?, ?, ?)",
+      [name, email, password_hash, clubId]
     );
 
     return res.json({ ok: true, email });
@@ -89,6 +104,13 @@ router.post("/login", async (req, res) => {
     }
 
     const user = rows[0];
+    if (!user.club_id) {
+      user.club_id = await getDefaultClubId();
+      await pool.query(
+        "UPDATE users SET club_id = ? WHERE id = ?",
+        [user.club_id, user.id]
+      );
+    }
 
     // El admin puede desactivar cuentas desde el panel
     if (!user.is_active) {
@@ -104,7 +126,7 @@ router.post("/login", async (req, res) => {
     // Creamos el token JWT con los datos básicos del usuario
     // Expira en 7 días
     const token = jwt.sign(
-      { id: user.id, name: user.name, email: user.email, role: user.role },
+      { id: user.id, name: user.name, email: user.email, role: user.role, club_id: user.club_id },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );

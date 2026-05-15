@@ -1,10 +1,12 @@
 const express   = require("express");
 const pool      = require("../db");
 const adminAuth = require("../middleware/adminAuth");
+const requireClubContext = require("../middleware/requireClubContext");
 
 const router = express.Router();
 
 // Todas las rutas de este archivo requieren rol 'admin' (lo comprueba adminAuth)
+router.use(adminAuth, requireClubContext);
 
 // Recorta "HH:MM:SS" a "HH:MM"
 function toHHMM(t) {
@@ -19,19 +21,22 @@ function toDateStr(d) {
 
 // ── GET /admin/stats ──────────────────────────────────────────
 // Métricas para el dashboard: usuarios activos, reservas de hoy y totales
-router.get("/stats", adminAuth, async (_req, res) => {
+router.get("/stats", async (req, res) => {
   try {
     const today = new Date().toISOString().split("T")[0];
+    const clubId = req.user.club_id;
 
     const [[{ usersTotal }]] = await pool.query(
-      "SELECT COUNT(*) AS usersTotal FROM users WHERE is_active = 1"
+      "SELECT COUNT(*) AS usersTotal FROM users WHERE is_active = 1 AND club_id = ?",
+      [clubId]
     );
     const [[{ reservationsToday }]] = await pool.query(
-      "SELECT COUNT(*) AS reservationsToday FROM reservations WHERE reservation_date = ? AND status = 'confirmed'",
-      [today]
+      "SELECT COUNT(*) AS reservationsToday FROM reservations WHERE club_id = ? AND reservation_date = ? AND status = 'confirmed'",
+      [clubId, today]
     );
     const [[{ reservationsTotal }]] = await pool.query(
-      "SELECT COUNT(*) AS reservationsTotal FROM reservations WHERE status = 'confirmed'"
+      "SELECT COUNT(*) AS reservationsTotal FROM reservations WHERE club_id = ? AND status = 'confirmed'",
+      [clubId]
     );
 
     // Detalle de las reservas de hoy con el nombre de la pista y el email del usuario
@@ -44,11 +49,12 @@ router.get("/stats", adminAuth, async (_req, res) => {
               u.name  AS user_name
        FROM   reservations r
        JOIN   users  u ON u.id = r.user_id
-       JOIN   courts c ON c.id = r.court_id
-       WHERE  r.reservation_date = ?
+       JOIN   courts c ON c.id = r.court_id AND c.club_id = r.club_id
+       WHERE  r.club_id = ?
+         AND  r.reservation_date = ?
          AND  r.status = 'confirmed'
        ORDER  BY r.start_time ASC`,
-      [today]
+      [clubId, today]
     );
 
     return res.json({
@@ -67,12 +73,15 @@ router.get("/stats", adminAuth, async (_req, res) => {
 
 // ── GET /admin/users ──────────────────────────────────────────
 // Lista todos los usuarios del sistema
-router.get("/users", adminAuth, async (_req, res) => {
+router.get("/users", async (req, res) => {
   try {
+    const clubId = req.user.club_id;
     const [rows] = await pool.query(
       `SELECT id, name, email, phone, role, is_active, created_at
        FROM   users
-       ORDER  BY created_at DESC`
+       WHERE  club_id = ?
+       ORDER  BY created_at DESC`,
+      [clubId]
     );
     return res.json({ ok: true, users: rows });
   } catch (e) {
@@ -83,10 +92,11 @@ router.get("/users", adminAuth, async (_req, res) => {
 
 // ── PATCH /admin/users/:id/role ───────────────────────────────
 // Cambia el rol de un usuario entre 'user' y 'admin'
-router.patch("/users/:id/role", adminAuth, async (req, res) => {
+router.patch("/users/:id/role", async (req, res) => {
   try {
     const id   = Number(req.params.id);
     const role = req.body?.role;
+    const clubId = req.user.club_id;
 
     if (!id) {
       return res.status(400).json({ ok: false, error: "ID inválido" });
@@ -100,8 +110,8 @@ router.patch("/users/:id/role", adminAuth, async (req, res) => {
     }
 
     const [result] = await pool.query(
-      "UPDATE users SET role = ? WHERE id = ?",
-      [role, id]
+      "UPDATE users SET role = ? WHERE id = ? AND club_id = ?",
+      [role, id, clubId]
     );
     if (result.affectedRows === 0) {
       return res.status(404).json({ ok: false, error: "Usuario no encontrado" });
@@ -116,10 +126,11 @@ router.patch("/users/:id/role", adminAuth, async (req, res) => {
 
 // ── PATCH /admin/users/:id/active ─────────────────────────────
 // Activa o desactiva una cuenta (is_active: 1 activa, 0 desactivada)
-router.patch("/users/:id/active", adminAuth, async (req, res) => {
+router.patch("/users/:id/active", async (req, res) => {
   try {
     const id        = Number(req.params.id);
     const is_active = req.body?.is_active;
+    const clubId = req.user.club_id;
 
     if (!id) {
       return res.status(400).json({ ok: false, error: "ID inválido" });
@@ -132,8 +143,8 @@ router.patch("/users/:id/active", adminAuth, async (req, res) => {
     }
 
     const [result] = await pool.query(
-      "UPDATE users SET is_active = ? WHERE id = ?",
-      [is_active, id]
+      "UPDATE users SET is_active = ? WHERE id = ? AND club_id = ?",
+      [is_active, id, clubId]
     );
     if (result.affectedRows === 0) {
       return res.status(404).json({ ok: false, error: "Usuario no encontrado" });
@@ -149,9 +160,10 @@ router.patch("/users/:id/active", adminAuth, async (req, res) => {
 
 // ── DELETE /admin/users/:id ───────────────────────────────────
 // Elimina un usuario permanentemente de la base de datos
-router.delete("/users/:id", adminAuth, async (req, res) => {
+router.delete("/users/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
+    const clubId = req.user.club_id;
 
     if (!id) {
       return res.status(400).json({ ok: false, error: "ID inválido" });
@@ -160,7 +172,7 @@ router.delete("/users/:id", adminAuth, async (req, res) => {
       return res.status(400).json({ ok: false, error: "No puedes eliminarte a ti mismo" });
     }
 
-    const [result] = await pool.query("DELETE FROM users WHERE id = ?", [id]);
+    const [result] = await pool.query("DELETE FROM users WHERE id = ? AND club_id = ?", [id, clubId]);
     if (result.affectedRows === 0) {
       return res.status(404).json({ ok: false, error: "Usuario no encontrado" });
     }
@@ -175,12 +187,13 @@ router.delete("/users/:id", adminAuth, async (req, res) => {
 // ── GET /admin/reservations ───────────────────────────────────
 // Lista reservas con filtros opcionales por fecha, pista o estado
 // Sin filtros devuelve las últimas 200
-router.get("/reservations", adminAuth, async (req, res) => {
+router.get("/reservations", async (req, res) => {
   try {
     const { reservation_date, court_id, status } = req.query;
+    const clubId = req.user.club_id;
 
-    const conditions = [];
-    const params     = [];
+    const conditions = ["r.club_id = ?"];
+    const params     = [clubId];
 
     if (reservation_date) {
       conditions.push("r.reservation_date = ?");
@@ -195,7 +208,7 @@ router.get("/reservations", adminAuth, async (req, res) => {
       params.push(status);
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const where = `WHERE ${conditions.join(" AND ")}`;
 
     const [rows] = await pool.query(
       `SELECT r.id,
@@ -210,7 +223,7 @@ router.get("/reservations", adminAuth, async (req, res) => {
               u.name   AS user_name
        FROM   reservations r
        JOIN   users  u ON u.id = r.user_id
-       JOIN   courts c ON c.id = r.court_id
+       JOIN   courts c ON c.id = r.court_id AND c.club_id = r.club_id
        ${where}
        ORDER  BY r.reservation_date DESC, r.start_time DESC
        LIMIT  200`,
@@ -233,16 +246,17 @@ router.get("/reservations", adminAuth, async (req, res) => {
 
 // ── DELETE /admin/reservations/:id ────────────────────────────
 // Cancela cualquier reserva desde el panel admin (soft delete)
-router.delete("/reservations/:id", adminAuth, async (req, res) => {
+router.delete("/reservations/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
+    const clubId = req.user.club_id;
     if (!id) {
       return res.status(400).json({ ok: false, error: "ID inválido" });
     }
 
     const [result] = await pool.query(
-      "UPDATE reservations SET status = 'cancelled' WHERE id = ? AND status != 'cancelled'",
-      [id]
+      "UPDATE reservations SET status = 'cancelled' WHERE id = ? AND club_id = ? AND status != 'cancelled'",
+      [id, clubId]
     );
     if (result.affectedRows === 0) {
       return res.status(404).json({ ok: false, error: "Reserva no encontrada o ya cancelada" });
@@ -257,10 +271,12 @@ router.delete("/reservations/:id", adminAuth, async (req, res) => {
 
 // ── GET /admin/courts ─────────────────────────────────────────
 // Lista todas las pistas, incluyendo las inactivas y en mantenimiento
-router.get("/courts", adminAuth, async (_req, res) => {
+router.get("/courts", async (req, res) => {
   try {
+    const clubId = req.user.club_id;
     const [courts] = await pool.query(
-      "SELECT id, name, type, status, capacity, notes FROM courts ORDER BY id"
+      "SELECT id, name, type, status, capacity, notes FROM courts WHERE club_id = ? ORDER BY id",
+      [clubId]
     );
     return res.json({ ok: true, courts });
   } catch (e) {
@@ -271,12 +287,13 @@ router.get("/courts", adminAuth, async (_req, res) => {
 
 // ── POST /admin/courts ────────────────────────────────────────
 // Crea una pista nueva
-router.post("/courts", adminAuth, async (req, res) => {
+router.post("/courts", async (req, res) => {
   try {
     const name     = String(req.body?.name     || "").trim();
     const type     = String(req.body?.type     || "").trim();
     const capacity = Number(req.body?.capacity) || 4;
     const notes    = String(req.body?.notes    || "").trim() || null;
+    const clubId   = req.user.club_id;
 
     if (!name || !type) {
       return res.status(400).json({ ok: false, error: "name y type son obligatorios" });
@@ -286,8 +303,13 @@ router.post("/courts", adminAuth, async (req, res) => {
     }
 
     const [result] = await pool.query(
-      "INSERT INTO courts (name, type, capacity, notes) VALUES (?, ?, ?, ?)",
-      [name, type, capacity, notes]
+      "INSERT INTO courts (club_id, name, type, capacity, notes) VALUES (?, ?, ?, ?, ?)",
+      [clubId, name, type, capacity, notes]
+    );
+
+    await pool.query(
+      "UPDATE clubs SET court_count = (SELECT COUNT(*) FROM courts WHERE club_id = ?) WHERE id = ?",
+      [clubId, clubId]
     );
 
     return res.status(201).json({ ok: true, courtId: result.insertId, message: "Pista creada" });
@@ -299,13 +321,14 @@ router.post("/courts", adminAuth, async (req, res) => {
 
 // ── PUT /admin/courts/:id ─────────────────────────────────────
 // Edita los datos de una pista existente
-router.put("/courts/:id", adminAuth, async (req, res) => {
+router.put("/courts/:id", async (req, res) => {
   try {
     const id       = Number(req.params.id);
     const name     = String(req.body?.name     || "").trim();
     const type     = String(req.body?.type     || "").trim();
     const capacity = Number(req.body?.capacity) || 4;
     const notes    = String(req.body?.notes    || "").trim() || null;
+    const clubId   = req.user.club_id;
 
     if (!id || !name || !type) {
       return res.status(400).json({ ok: false, error: "id, name y type son obligatorios" });
@@ -315,8 +338,8 @@ router.put("/courts/:id", adminAuth, async (req, res) => {
     }
 
     const [result] = await pool.query(
-      "UPDATE courts SET name = ?, type = ?, capacity = ?, notes = ? WHERE id = ?",
-      [name, type, capacity, notes, id]
+      "UPDATE courts SET name = ?, type = ?, capacity = ?, notes = ? WHERE id = ? AND club_id = ?",
+      [name, type, capacity, notes, id, clubId]
     );
     if (result.affectedRows === 0) {
       return res.status(404).json({ ok: false, error: "Pista no encontrada" });
@@ -331,10 +354,11 @@ router.put("/courts/:id", adminAuth, async (req, res) => {
 
 // ── PATCH /admin/courts/:id/status ───────────────────────────
 // Cambia el estado de una pista: 'active', 'inactive' o 'maintenance'
-router.patch("/courts/:id/status", adminAuth, async (req, res) => {
+router.patch("/courts/:id/status", async (req, res) => {
   try {
     const id     = Number(req.params.id);
     const status = req.body?.status;
+    const clubId = req.user.club_id;
 
     if (!id) {
       return res.status(400).json({ ok: false, error: "ID inválido" });
@@ -347,8 +371,8 @@ router.patch("/courts/:id/status", adminAuth, async (req, res) => {
     }
 
     const [result] = await pool.query(
-      "UPDATE courts SET status = ? WHERE id = ?",
-      [status, id]
+      "UPDATE courts SET status = ? WHERE id = ? AND club_id = ?",
+      [status, id, clubId]
     );
     if (result.affectedRows === 0) {
       return res.status(404).json({ ok: false, error: "Pista no encontrada" });
@@ -363,9 +387,10 @@ router.patch("/courts/:id/status", adminAuth, async (req, res) => {
 
 // ── DELETE /admin/courts/:id ──────────────────────────────────
 // Elimina una pista. No permite borrarla si tiene reservas futuras activas.
-router.delete("/courts/:id", adminAuth, async (req, res) => {
+router.delete("/courts/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
+    const clubId = req.user.club_id;
     if (!id) {
       return res.status(400).json({ ok: false, error: "ID inválido" });
     }
@@ -373,8 +398,8 @@ router.delete("/courts/:id", adminAuth, async (req, res) => {
     // Comprobamos que no haya reservas confirmadas en el futuro para esta pista
     const [[{ n }]] = await pool.query(
       `SELECT COUNT(*) AS n FROM reservations
-       WHERE court_id = ? AND status = 'confirmed' AND reservation_date >= CURDATE()`,
-      [id]
+       WHERE court_id = ? AND club_id = ? AND status = 'confirmed' AND reservation_date >= CURDATE()`,
+      [id, clubId]
     );
     if (n > 0) {
       return res.status(409).json({
@@ -383,10 +408,15 @@ router.delete("/courts/:id", adminAuth, async (req, res) => {
       });
     }
 
-    const [result] = await pool.query("DELETE FROM courts WHERE id = ?", [id]);
+    const [result] = await pool.query("DELETE FROM courts WHERE id = ? AND club_id = ?", [id, clubId]);
     if (result.affectedRows === 0) {
       return res.status(404).json({ ok: false, error: "Pista no encontrada" });
     }
+
+    await pool.query(
+      "UPDATE clubs SET court_count = (SELECT COUNT(*) FROM courts WHERE club_id = ?) WHERE id = ?",
+      [clubId, clubId]
+    );
 
     return res.json({ ok: true, message: "Pista eliminada" });
   } catch (e) {

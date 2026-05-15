@@ -33,7 +33,7 @@ test("GET /reservations/my sin autenticación devuelve 401", async () => {
 test("POST /reservations con franja ya ocupada devuelve 409", async () => {
   // Creamos un token de prueba para pasar el middleware de autenticación
   const token = jwt.sign(
-    { id: 1, email: "test@padex.com", role: "user" },
+    { id: 1, email: "test@padex.com", role: "user", club_id: 1 },
     process.env.JWT_SECRET
   );
 

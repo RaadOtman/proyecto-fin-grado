@@ -1,8 +1,9 @@
 const jwt = require("jsonwebtoken");
+const pool = require("../db");
 
 // Middleware de autenticación para rutas protegidas
 // Lo usamos en cualquier ruta que requiera que el usuario haya iniciado sesión
-function auth(req, res, next) {
+async function auth(req, res, next) {
   // El token se guarda en una cookie HTTP-only llamada "padel_token"
   const token = req.cookies?.padel_token;
 
@@ -14,9 +15,18 @@ function auth(req, res, next) {
     // Verificamos el token con el secreto del .env
     // Si es válido, sacamos los datos del usuario (id, email) y los guardamos en req.user
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = payload; // { id, email }
+
+    if (!payload.club_id && payload.id) {
+      const [rows] = await pool.query(
+        "SELECT club_id FROM users WHERE id = ? LIMIT 1",
+        [payload.id]
+      );
+      payload.club_id = rows[0]?.club_id ?? null;
+    }
+
+    req.user = payload; // { id, email, role, club_id }
     return next();
-  } catch {
+  } catch (e) {
     // Si el token ha expirado o no es válido, devolvemos error
     return res.status(401).json({ ok: false, error: "Sesión expirada" });
   }

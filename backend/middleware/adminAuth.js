@@ -1,8 +1,9 @@
 const jwt = require("jsonwebtoken");
+const pool = require("../db");
 
 // Middleware de autenticación para rutas exclusivas del administrador
 // Hace lo mismo que auth.js pero además comprueba que el usuario tenga rol 'admin'
-function adminAuth(req, res, next) {
+async function adminAuth(req, res, next) {
   const token = req.cookies?.padel_token;
 
   if (!token) {
@@ -17,9 +18,17 @@ function adminAuth(req, res, next) {
       return res.status(403).json({ ok: false, error: "Acceso denegado: se requiere rol admin" });
     }
 
-    req.user = payload; // { id, email, role }
+    if (!payload.club_id && payload.id) {
+      const [rows] = await pool.query(
+        "SELECT club_id FROM users WHERE id = ? LIMIT 1",
+        [payload.id]
+      );
+      payload.club_id = rows[0]?.club_id ?? null;
+    }
+
+    req.user = payload; // { id, email, role, club_id }
     return next();
-  } catch {
+  } catch (e) {
     return res.status(401).json({ ok: false, error: "Sesión expirada" });
   }
 }
