@@ -3,6 +3,15 @@ import { getMyReservations, cancelReservation } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import {
+  FiCalendar,
+  FiClock,
+  FiEye,
+  FiList,
+  FiRefreshCw,
+  FiRotateCcw,
+  FiXCircle,
+} from "react-icons/fi";
 import Loader from "../components/Loader";
 import SkeletonCard from "../components/SkeletonCard";
 
@@ -28,9 +37,36 @@ function formatDate(dateISO: string) {
   return d.toLocaleDateString("es-ES");
 }
 
+function formatLongDate(dateISO: string) {
+  return new Date(`${dateISO}T00:00:00`).toLocaleDateString("es-ES", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+  });
+}
+
+function reservationDateTime(r: ResItem) {
+  return new Date(`${r.reservation_date}T${r.start_time}:00`).getTime();
+}
+
+function getVisualStatus(r: ResItem) {
+  const status = String(r.status || "").toLowerCase();
+  if (status === "cancelled" || status === "cancelada") return "cancelled";
+  if (isPast(r.reservation_date, r.start_time)) return "past";
+  if (status === "pending" || status === "pendiente") return "pending";
+  return "confirmed";
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  confirmed: "Confirmada",
+  pending: "Pendiente",
+  cancelled: "Cancelada",
+  past: "Finalizada",
+};
+
 export default function MyReservations() {
   const navigate = useNavigate();
-  const { isAuthenticated, userEmail } = useAuth();
+  const { isAuthenticated, userEmail, clubName } = useAuth();
 
   const [items, setItems] = useState<ResItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,6 +86,17 @@ export default function MyReservations() {
     // Ordenamos de más reciente a más antigua
     return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1));
   }, [items]);
+
+  const upcoming = useMemo(
+    () =>
+      items
+        .filter((r) => getVisualStatus(r) === "confirmed" || getVisualStatus(r) === "pending")
+        .sort((a, b) => reservationDateTime(a) - reservationDateTime(b)),
+    [items]
+  );
+
+  const nextReservation = upcoming[0] || null;
+  const finishedCount = items.filter((r) => getVisualStatus(r) === "past").length;
 
   // Carga las reservas del usuario desde el backend
   async function load() {
@@ -126,13 +173,15 @@ export default function MyReservations() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28 }}
     >
-      <div className="section-panel">
+      <div className="section-panel my-reservations-panel">
         <div className="page-header-row">
           <div className="page-header">
-            <span className="badge">Padex</span>
+            <span className="badge">Actividad del jugador</span>
             <h1 className="page-title">Mis reservas</h1>
             <p className="page-subtitle">
-              {userEmail ? `Usuario: ${userEmail}` : "Gestiona tus reservas activas"}
+              {userEmail
+                ? `Gestiona tus reservas, próximas partidas e historial de actividad.`
+                : "Gestiona tus reservas activas"}
             </p>
           </div>
 
@@ -142,6 +191,7 @@ export default function MyReservations() {
               className="button"
               onClick={() => navigate("/reservar")}
             >
+              <FiCalendar />
               Reservar pista
             </button>
 
@@ -151,8 +201,64 @@ export default function MyReservations() {
               onClick={load}
               disabled={loading}
             >
+              <FiRefreshCw />
               {loading ? "Actualizando..." : "Actualizar"}
             </button>
+          </div>
+        </div>
+
+        <div className="my-reservations-overview">
+          <article className="my-next-card">
+            <div className="my-next-card-top">
+              <span className="my-section-kicker">Próxima reserva</span>
+              <span className={`reservation-status ${nextReservation ? "confirmed" : "empty"}`}>
+                {nextReservation ? "Confirmada" : "Sin reserva"}
+              </span>
+            </div>
+            {nextReservation ? (
+              <>
+                <h2>{nextReservation.court_name}</h2>
+                <p>
+                  {formatLongDate(nextReservation.reservation_date)} · {nextReservation.start_time}
+                  -{nextReservation.end_time}
+                </p>
+                <div className="my-next-meta">
+                  <span><FiClock /> {nextReservation.start_time}</span>
+                  <span><FiList /> ID #{nextReservation.id}</span>
+                  <span>{clubName || "Club PADEX"}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2>Sin reservas próximas</h2>
+                <p>Reserva una pista y tu próxima partida aparecerá destacada aquí.</p>
+              </>
+            )}
+            <div className="my-next-actions">
+              <button type="button" className="button" onClick={() => navigate("/reservar")}>
+                <FiRotateCcw />
+                Reservar otra vez
+              </button>
+              <button type="button" className="button-secondary" onClick={load} disabled={loading}>
+                <FiRefreshCw />
+                Actualizar
+              </button>
+            </div>
+          </article>
+
+          <div className="my-reservation-stats">
+            <div className="my-stat-card">
+              <span>Activas</span>
+              <strong>{upcoming.length}</strong>
+            </div>
+            <div className="my-stat-card">
+              <span>Finalizadas</span>
+              <strong>{finishedCount}</strong>
+            </div>
+            <div className="my-stat-card">
+              <span>Total</span>
+              <strong>{items.length}</strong>
+            </div>
           </div>
         </div>
 
@@ -170,8 +276,10 @@ export default function MyReservations() {
           </div>
         ) : items.length === 0 ? (
           // Si no hay reservas mostramos un mensaje y botón para crear la primera
-          <div className="reservation-card">
-            <p className="page-empty">Aún no tienes reservas creadas.</p>
+          <div className="my-reservations-empty">
+            <FiCalendar />
+            <h2>Aún no tienes reservas</h2>
+            <p>Cuando reserves una pista, verás aquí tus próximas partidas y el historial del club.</p>
             <button
               type="button"
               className="button"
@@ -182,23 +290,27 @@ export default function MyReservations() {
           </div>
         ) : (
           // Mostramos las reservas agrupadas por fecha
-          <div className="res-groups">
+          <div className="res-groups my-timeline">
             {grouped.map(([date, list]) => (
               <section key={date} className="res-group">
                 <div className="res-group-header">
-                  <h2>{formatDate(date)}</h2>
+                  <div>
+                    <span className="my-section-kicker">Día de reserva</span>
+                    <h2>{formatLongDate(date)}</h2>
+                  </div>
                   <span className="badge">{list.length} reserva(s)</span>
                 </div>
 
-                <div className="reservation-grid">
+                <div className="reservation-grid my-reservation-grid">
                   {list
                     .slice()
                     .sort((a, b) => (a.start_time < b.start_time ? -1 : 1))
                     .map((r) => {
-                      const past = isPast(r.reservation_date, r.start_time);
+                      const visualStatus = getVisualStatus(r);
+                      const isCancelable = visualStatus === "confirmed" || visualStatus === "pending";
 
                       return (
-                        <div key={r.id} className="reservation-card">
+                        <div key={r.id} className={`reservation-card my-reservation-card is-${visualStatus}`}>
                           <div className="reservation-card-top">
                             <div>
                               <h3 className="res-card-court">{r.court_name}</h3>
@@ -207,29 +319,53 @@ export default function MyReservations() {
                               </p>
                             </div>
 
-                            {/* Etiqueta que indica si la reserva es futura o ya pasó */}
-                            <span className={`reservation-status ${past ? "past" : "active"}`}>
-                              {past ? "Pasada" : "Activa"}
+                            <span className={`reservation-status ${visualStatus}`}>
+                              {STATUS_LABEL[visualStatus]}
                             </span>
+                          </div>
+
+                          <div className="my-reservation-details">
+                            <div>
+                              <span>Hora</span>
+                              <strong>{r.start_time}-{r.end_time}</strong>
+                            </div>
+                            <div>
+                              <span>Club</span>
+                              <strong>{clubName || "PADEX"}</strong>
+                            </div>
+                            <div>
+                              <span>Estado</span>
+                              <strong>{STATUS_LABEL[visualStatus]}</strong>
+                            </div>
                           </div>
 
                           <div className="res-card-meta">
                             <span className="res-card-id">ID #{r.id}</span>
 
-                            {/* Solo se puede cancelar si la reserva es futura */}
-                            <button
-                              type="button"
-                              className="btn-danger"
-                              onClick={() => onCancel(r.id)}
-                              disabled={past}
-                              title={
-                                past
-                                  ? "No se puede cancelar una reserva pasada"
-                                  : "Cancelar reserva"
-                              }
-                            >
-                              Cancelar
-                            </button>
+                            <div className="my-reservation-actions">
+                              <button
+                                type="button"
+                                className="button-secondary button-sm"
+                                onClick={() => navigate("/reservar")}
+                              >
+                                <FiEye />
+                                Ver disponibilidad
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-danger button-sm"
+                                onClick={() => onCancel(r.id)}
+                                disabled={!isCancelable}
+                                title={
+                                  !isCancelable
+                                    ? "No se puede cancelar una reserva finalizada"
+                                    : "Cancelar reserva"
+                                }
+                              >
+                                <FiXCircle />
+                                Cancelar
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );

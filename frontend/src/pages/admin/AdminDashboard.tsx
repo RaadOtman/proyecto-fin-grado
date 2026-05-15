@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { FiUsers, FiCalendar, FiBarChart2 } from "react-icons/fi";
-import { getAdminStats } from "../../lib/adminApiClient";
+import { FiUsers, FiCalendar, FiBarChart2, FiActivity, FiClock, FiGrid } from "react-icons/fi";
+import { getAdminCourts, getAdminStats } from "../../lib/adminApiClient";
 import Loader from "../../components/Loader";
 import StatCard from "../../components/admin/StatCard";
 
@@ -42,15 +42,25 @@ const fadeUp = {
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [todayReservations, setTodayReservations] = useState<TodayReservation[]>([]);
+  const [activeCourts, setActiveCourts] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const estimatedOccupancy = stats
+    ? stats.reservationsToday > 0
+      ? Math.min(100, Math.round((stats.reservationsToday / Math.max(stats.reservationsTotal, 1)) * 100))
+      : 0
+    : 0;
 
   useEffect(() => {
     async function load() {
       try {
-        const data = await getAdminStats();
+        const [data, courtsData] = await Promise.all([getAdminStats(), getAdminCourts()]);
         setStats(data.stats);
         setTodayReservations(data.todayReservations || []);
+        setActiveCourts(
+          (courtsData.courts || []).filter((court: { status?: string }) => court.status === "active").length
+        );
       } catch (e: any) {
         setError(e?.message || "Error cargando estadísticas");
       } finally {
@@ -62,10 +72,22 @@ export default function AdminDashboard() {
 
   return (
     <div className="admin-page">
-      <motion.div className="admin-page-header" variants={fadeUp} initial="hidden" animate="show">
+      <motion.div className="admin-page-header admin-dashboard-hero" variants={fadeUp} initial="hidden" animate="show">
         <div>
-          <h1 className="admin-page-title">Dashboard</h1>
-          <p className="admin-page-subtitle">{todayFormatted()}</p>
+          <span className="admin-hero-kicker">Panel del club</span>
+          <h1 className="admin-page-title">Centro de control</h1>
+          <p className="admin-page-subtitle">
+            Vista operativa para reservas, usuarios y actividad diaria del club.
+          </p>
+          <div className="admin-hero-meta">
+            <span><FiClock size={13} /> {todayFormatted()}</span>
+            <span><FiActivity size={13} /> Operación activa</span>
+          </div>
+        </div>
+        <div className="admin-hero-card">
+          <span>Reservas hoy</span>
+          <strong>{stats?.reservationsToday ?? "..."}</strong>
+          <p>{todayReservations.length} en agenda visible</p>
         </div>
       </motion.div>
 
@@ -87,6 +109,7 @@ export default function AdminDashboard() {
                 value={stats.usersTotal}
                 label="Usuarios registrados"
                 accent="default"
+                trend={{ value: "Base de clientes", direction: "neutral" }}
               />
             </motion.div>
 
@@ -96,15 +119,27 @@ export default function AdminDashboard() {
                 value={stats.reservationsToday}
                 label="Reservas hoy"
                 accent="green"
+                trend={{ value: todayReservations.length ? "Con actividad" : "Sin agenda hoy", direction: todayReservations.length ? "up" : "neutral" }}
+              />
+            </motion.div>
+
+            <motion.div variants={fadeUp} className="motion-list-item">
+              <StatCard
+                icon={<FiGrid size={16} />}
+                value={activeCourts}
+                label="Pistas activas"
+                accent="blue"
+                trend={{ value: "Inventario disponible", direction: activeCourts > 0 ? "up" : "neutral" }}
               />
             </motion.div>
 
             <motion.div variants={fadeUp} className="motion-list-item">
               <StatCard
                 icon={<FiBarChart2 size={16} />}
-                value={stats.reservationsTotal}
-                label="Reservas totales"
-                accent="blue"
+                value={`${estimatedOccupancy}%`}
+                label="Ocupación estimada"
+                accent="amber"
+                trend={{ value: "Basado en actividad diaria", direction: estimatedOccupancy > 0 ? "up" : "neutral" }}
               />
             </motion.div>
           </motion.div>
@@ -117,7 +152,10 @@ export default function AdminDashboard() {
             transition={{ delay: 0.26 }}
           >
             <div className="admin-section-header">
-              <h2 className="admin-section-title">Reservas de hoy</h2>
+              <div>
+                <span className="admin-section-kicker">Agenda operativa</span>
+                <h2 className="admin-section-title">Reservas de hoy</h2>
+              </div>
               <span className="badge">
                 {todayReservations.length} reserva{todayReservations.length !== 1 ? "s" : ""}
               </span>
@@ -134,7 +172,7 @@ export default function AdminDashboard() {
                 </p>
               </div>
             ) : (
-              <div className="table-wrap">
+              <div className="table-wrap admin-table-wrap">
                 <table className="data-table">
                   <thead>
                     <tr>

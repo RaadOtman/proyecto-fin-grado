@@ -27,7 +27,10 @@ export default function AdminSidebar() {
     <aside className="admin-sidebar">
       <div className="admin-sidebar-header">
         <div className="admin-sidebar-brand">
-          <span className="admin-sidebar-brand-name">Padex</span>
+          <div>
+            <span className="admin-sidebar-brand-name">Padex</span>
+            <span className="admin-sidebar-brand-sub">Club operations</span>
+          </div>
           <span className="admin-sidebar-brand-tag">Admin</span>
         </div>
       </div>

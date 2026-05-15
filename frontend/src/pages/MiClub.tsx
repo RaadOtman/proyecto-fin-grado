@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiMapPin, FiCheck, FiX, FiGrid } from "react-icons/fi";
+import {
+  FiActivity,
+  FiCalendar,
+  FiCheck,
+  FiClock,
+  FiExternalLink,
+  FiGrid,
+  FiMapPin,
+  FiX,
+} from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import { getClubs, patchUserClub } from "../lib/apiClient";
 import Loader from "../components/Loader";
@@ -38,6 +48,7 @@ function toEmbedUrl(url: string): string {
 
 export default function MiClub() {
   const { userId, clubId, updateClub } = useAuth();
+  const navigate = useNavigate();
 
   const [clubs,    setClubs   ] = useState<Club[]>([]);
   const [loading,  setLoading ] = useState(true);
@@ -102,8 +113,11 @@ export default function MiClub() {
     >
       <div className="page-header-row">
         <div>
+          <span className="badge">Ficha del club</span>
           <h1 className="page-title">Mi club</h1>
-          <p className="page-subtitle">Selecciona el club al que perteneces.</p>
+          <p className="page-subtitle">
+            Gestiona tu club de referencia y accede rápido a disponibilidad y reservas.
+          </p>
         </div>
       </div>
 
@@ -222,16 +236,57 @@ export default function MiClub() {
                       alt={previewClub.name}
                       className="club-detail-banner"
                     />
+                    <div className="club-profile-hero-content">
+                      <span className="club-status-pill">
+                        <span className="club-status-dot" />
+                        Club operativo
+                      </span>
+                      <h2>{previewClub.name}</h2>
+                      <p>
+                        <FiMapPin size={14} />
+                        {previewClub.city}
+                      </p>
+                      <div className="club-profile-actions">
+                        <button type="button" className="button" onClick={() => navigate("/reservar")}>
+                          <FiCalendar />
+                          Reservar pista
+                        </button>
+                        <button type="button" className="button-secondary" onClick={() => navigate("/reservar")}>
+                          <FiClock />
+                          Ver disponibilidad
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ) : (
-                  <div className="club-detail-banner-placeholder">
-                    <FiGrid size={32} />
+                  <div className="club-detail-banner-placeholder club-profile-hero-placeholder">
+                    <span className="club-status-pill">
+                      <span className="club-status-dot" />
+                      Club operativo
+                    </span>
+                    <FiGrid size={34} />
+                    <h2>{previewClub.name}</h2>
+                    <p>
+                      <FiMapPin size={14} />
+                      {previewClub.city}
+                    </p>
+                    <div className="club-profile-actions">
+                      <button type="button" className="button" onClick={() => navigate("/reservar")}>
+                        <FiCalendar />
+                        Reservar pista
+                      </button>
+                      <button type="button" className="button-secondary" onClick={() => navigate("/reservar")}>
+                        <FiClock />
+                        Ver disponibilidad
+                      </button>
+                    </div>
                   </div>
                 )}
 
                 <div className="club-detail-content">
                   <div className="club-detail-header">
                     <div>
+                      <span className="club-detail-kicker">Resumen del club</span>
                       <h2 className="club-detail-name">{previewClub.name}</h2>
                       <p className="club-detail-city">
                         <FiMapPin size={13} />
@@ -243,21 +298,50 @@ export default function MiClub() {
                     )}
                   </div>
 
+                  <div className="club-info-grid">
+                    <article className="club-info-card">
+                      <FiGrid />
+                      <span>Pistas disponibles</span>
+                      <strong>{previewClub.court_count ?? "Pendiente"}</strong>
+                    </article>
+                    <article className="club-info-card">
+                      <FiClock />
+                      <span>Horarios</span>
+                      <strong>Según disponibilidad</strong>
+                    </article>
+                    <article className="club-info-card">
+                      <FiActivity />
+                      <span>Tipo de pistas</span>
+                      <strong>Pádel club</strong>
+                    </article>
+                    <article className="club-info-card">
+                      <FiMapPin />
+                      <span>Ubicación</span>
+                      <strong>{previewClub.city}</strong>
+                    </article>
+                  </div>
+
                   {previewClub.description && (
                     <p className="club-detail-desc">{previewClub.description}</p>
                   )}
 
-                  {previewClub.maps_url && (
-                    <a
-                      href={previewClub.maps_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="club-maps-btn"
-                    >
-                      <FiMapPin size={14} />
-                      Ver en Google Maps
-                    </a>
-                  )}
+                  <div className="club-detail-actions">
+                    <button type="button" className="button" onClick={() => navigate("/reservar")}>
+                      <FiCalendar />
+                      Reservar pista
+                    </button>
+                    {previewClub.maps_url && (
+                      <a
+                        href={previewClub.maps_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="club-maps-btn"
+                      >
+                        <FiExternalLink size={14} />
+                        Ver ubicación
+                      </a>
+                    )}
+                  </div>
                 </div>
 
                 {previewClub.maps_url && (
@@ -288,6 +372,9 @@ export default function MiClub() {
                 <p className="club-empty-desc">
                   Elige uno de los clubs disponibles en la lista de arriba y guarda tu selección.
                 </p>
+                <button type="button" className="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+                  Seleccionar club
+                </button>
               </motion.div>
             )}
           </AnimatePresence>

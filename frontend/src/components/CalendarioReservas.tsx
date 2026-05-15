@@ -67,9 +67,9 @@ export default function CalendarioReservas() {
       }
 
       await createReservation({
-        courtId,
-        date: fecha,
-        time,
+        court_id: courtId,
+        reservation_date: fecha,
+        start_time: time,
       });
 
       setMensaje("Reserva creada correctamente");

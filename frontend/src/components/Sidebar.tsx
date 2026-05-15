@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { FiCalendar, FiClock, FiGrid, FiHome, FiMapPin, FiPlus, FiSettings, FiUser } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar() {
@@ -38,29 +39,34 @@ export default function Sidebar() {
       transition={{ duration: 0.25 }}
     >
       <div className="sidebar-header">
-        <span className="sidebar-title">Panel principal</span>
-        <span className="sidebar-subtitle">Navegación y resumen</span>
+        <span className="sidebar-title">Padex</span>
+        <span className="sidebar-subtitle">Reservas del club</span>
       </div>
 
       <nav className="sidebar-nav">
         <NavLink to="/" className={getClassName} end>
-          🏠 Inicio
+          <FiHome />
+          Inicio
         </NavLink>
 
         {isAuthenticated && (
           <>
             <NavLink to="/reservar" className={getClassName}>
-              🎾 Reservar pista
+              <FiPlus />
+              Reservar pista
             </NavLink>
             <NavLink to="/mis-reservas" className={getClassName}>
-              📅 Mis reservas
+              <FiCalendar />
+              Mis reservas
             </NavLink>
             <NavLink to="/mi-club" className={getClassName}>
-              🏟️ Mi club
+              <FiMapPin />
+              Mi club
             </NavLink>
             {isAdmin && (
               <NavLink to="/admin/dashboard" className={getClassName}>
-                ⚙️ Panel Admin
+                <FiSettings />
+                Panel Admin
               </NavLink>
             )}
           </>
@@ -82,7 +88,8 @@ export default function Sidebar() {
             onClick={() => navigate('/reservar')}
             disabled={!isAuthenticated}
           >
-            + Nueva reserva
+            <FiPlus />
+            Nueva reserva
           </motion.button>
 
           <motion.button
@@ -93,6 +100,7 @@ export default function Sidebar() {
             onClick={() => navigate('/mis-reservas')}
             disabled={!isAuthenticated}
           >
+            <FiCalendar />
             Ver mis reservas
           </motion.button>
         </div>
@@ -102,11 +110,11 @@ export default function Sidebar() {
         <div className="sidebar-block-title">Resumen de hoy</div>
         <div className="sidebar-stats">
           <div className="sidebar-stat">
-            <span className="sidebar-stat-label">Fecha</span>
+            <span className="sidebar-stat-label"><FiCalendar /> Fecha</span>
             <span className="sidebar-stat-value">{today}</span>
           </div>
           <div className="sidebar-stat">
-            <span className="sidebar-stat-label">Hora</span>
+            <span className="sidebar-stat-label"><FiClock /> Hora</span>
             <span className="sidebar-stat-value">{now}</span>
           </div>
         </div>
@@ -118,7 +126,10 @@ export default function Sidebar() {
           {clubName ? (
             <div className="sidebar-club-card">
               <span className="sidebar-club-dot" />
-              <p className="sidebar-club-name">{clubName}</p>
+              <div>
+                <p className="sidebar-club-name">{clubName}</p>
+                <p className="sidebar-club-meta"><FiGrid /> Club activo</p>
+              </div>
             </div>
           ) : (
             <div className="sidebar-club-card">
@@ -139,7 +150,7 @@ export default function Sidebar() {
       )}
 
       <div className="sidebar-footer">
-        <p>Padex</p>
+        <p><FiUser /> Área jugador</p>
       </div>
     </motion.aside>
   );
