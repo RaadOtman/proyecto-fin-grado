@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiCalendar, FiClock, FiGrid, FiHome, FiMapPin, FiPlus, FiSettings, FiUser } from 'react-icons/fi';
+import { FiArchive, FiCalendar, FiClock, FiGrid, FiHome, FiMapPin, FiPlus, FiSettings, FiUser } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar() {
@@ -59,9 +59,17 @@ export default function Sidebar() {
               <FiCalendar />
               Mis reservas
             </NavLink>
+            <NavLink to="/historial" className={getClassName}>
+              <FiArchive />
+              Historial
+            </NavLink>
             <NavLink to="/mi-club" className={getClassName}>
               <FiMapPin />
               Mi club
+            </NavLink>
+            <NavLink to="/perfil" className={getClassName}>
+              <FiUser />
+              Mi perfil
             </NavLink>
             {isAdmin && (
               <NavLink to="/admin/dashboard" className={getClassName}>

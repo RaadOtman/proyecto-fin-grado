@@ -132,6 +132,21 @@ router.post("/", auth, requireClubContext, async (req, res) => {
     // Calculamos la hora de fin sumando la duración del slot
     const end_time = addMinutes(normalizedStart, slotMinutes);
 
+    const [blocked] = await pool.query(
+      `SELECT id FROM court_blocks
+       WHERE club_id = ?
+         AND block_date = ?
+         AND is_active = 1
+         AND (court_id = ? OR court_id IS NULL)
+         AND start_time < ?
+         AND end_time > ?
+       LIMIT 1`,
+      [clubId, reservation_date, court_id, end_time, normalizedStart]
+    );
+    if (blocked.length > 0) {
+      return res.status(409).json({ ok: false, error: "Esta franja está bloqueada por el club" });
+    }
+
     // Comprobamos si ya existe una reserva confirmada en esta franja antes de insertar
     const [conflict] = await pool.query(
       `SELECT id FROM reservations
@@ -205,6 +220,52 @@ router.get("/my", auth, requireClubContext, async (req, res) => {
   } catch (e) {
     console.error("MY RESERVATIONS ERROR:", e);
     return res.status(500).json({ ok: false, error: "Error listando reservas" });
+  }
+});
+
+// ── GET /reservations/history ─────────────────────────────────
+// Historico del usuario autenticado: reservas pasadas y canceladas en todos sus clubes.
+router.get("/history", auth, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT r.id,
+              r.club_id,
+              cl.name AS club_name,
+              r.court_id,
+              c.name  AS court_name,
+              r.reservation_date,
+              r.start_time,
+              r.end_time,
+              r.status,
+              r.players_count,
+              r.notes
+       FROM   reservations r
+       JOIN   courts c ON c.id = r.court_id AND c.club_id = r.club_id
+       JOIN   clubs cl ON cl.id = r.club_id
+       WHERE  r.user_id = ?
+         AND  (
+           r.status = 'cancelled'
+           OR r.reservation_date < CURDATE()
+           OR (r.reservation_date = CURDATE() AND r.end_time < CURTIME())
+         )
+       ORDER  BY r.reservation_date DESC, r.start_time DESC
+       LIMIT  500`,
+      [req.user.id]
+    );
+
+    const reservations = rows.map((r) => ({
+      ...r,
+      reservation_date: r.reservation_date instanceof Date
+        ? r.reservation_date.toISOString().split("T")[0]
+        : String(r.reservation_date),
+      start_time: toHHMM(r.start_time),
+      end_time:   toHHMM(r.end_time),
+    }));
+
+    return res.json({ ok: true, count: reservations.length, reservations });
+  } catch (e) {
+    console.error("RESERVATION HISTORY ERROR:", e);
+    return res.status(500).json({ ok: false, error: "Error listando histórico" });
   }
 });
 

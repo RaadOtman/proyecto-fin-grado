@@ -168,6 +168,12 @@ router.post("/club", auth, async (req, res) => {
     const clubId = clubResult.insertId;
 
     await conn.query("UPDATE users SET club_id = ? WHERE id = ?", [clubId, user.id]);
+    await conn.query(
+      `INSERT INTO user_clubs (user_id, club_id, role_in_club, status, joined_at, created_at)
+       VALUES (?, ?, 'admin', 'active', NOW(), NOW())
+       ON DUPLICATE KEY UPDATE role_in_club = 'admin', status = 'active'`,
+      [user.id, clubId]
+    );
 
     await conn.query(
       `INSERT INTO club_settings

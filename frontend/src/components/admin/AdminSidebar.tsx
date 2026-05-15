@@ -5,6 +5,7 @@ import {
   FiCalendar,
   FiSquare,
   FiSettings,
+  FiLock,
   FiArrowLeft,
   FiLogOut,
 } from "react-icons/fi";
@@ -59,6 +60,11 @@ export default function AdminSidebar() {
         <NavLink to="/admin/pistas" className={getClass}>
           <FiSquare size={15} />
           Pistas
+        </NavLink>
+
+        <NavLink to="/admin/bloqueos" className={getClass}>
+          <FiLock size={15} />
+          Bloqueos
         </NavLink>
 
         <NavLink to="/admin/club" className={getClass}>

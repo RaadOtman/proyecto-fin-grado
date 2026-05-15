@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { FiPlus, FiEdit2, FiCheck, FiX, FiRefreshCw, FiTrash2 } from "react-icons/fi";
+import { useEffect, useMemo, useState } from "react";
+import { FiActivity, FiCheck, FiEdit2, FiPlus, FiRefreshCw, FiTool, FiTrash2, FiX } from "react-icons/fi";
 import {
   getAdminCourts,
   createAdminCourt,
@@ -9,39 +9,60 @@ import {
 } from "../../lib/adminApiClient";
 import Loader from "../../components/Loader";
 
+type CourtStatus = "active" | "inactive" | "maintenance";
+type CourtType = "Interior" | "Exterior";
+
 type Court = {
   id: number;
   name: string;
-  type: "Interior" | "Exterior";
-  status: "active" | "inactive" | "maintenance";
+  type: CourtType;
+  surface: string | null;
+  status: CourtStatus;
   capacity: number;
+  base_price: number | null;
   notes: string | null;
 };
 
-type EditState = {
+type CourtForm = {
   name: string;
-  type: "Interior" | "Exterior";
+  type: CourtType;
+  surface: string;
   capacity: number;
+  base_price: string;
   notes: string;
 };
 
-const STATUS_LABELS: Record<Court["status"], string> = {
-  active:      "Activa",
-  inactive:    "Inactiva",
+const emptyForm: CourtForm = {
+  name: "",
+  type: "Exterior",
+  surface: "",
+  capacity: 4,
+  base_price: "",
+  notes: "",
+};
+
+const STATUS_LABELS: Record<CourtStatus, string> = {
+  active: "Activa",
+  inactive: "Inactiva",
   maintenance: "Mantenimiento",
 };
 
-const STATUS_NEXT: Record<Court["status"], Court["status"]> = {
-  active:      "inactive",
-  inactive:    "active",
-  maintenance: "active",
-};
-
-const STATUS_BADGE: Record<Court["status"], string> = {
-  active:      "badge",
-  inactive:    "badge badge-neutral",
+const STATUS_BADGE: Record<CourtStatus, string> = {
+  active: "badge badge-active",
+  inactive: "badge badge-neutral",
   maintenance: "badge badge-warning",
 };
+
+function toPayload(form: CourtForm) {
+  return {
+    name: form.name.trim(),
+    type: form.type,
+    surface: form.surface.trim(),
+    capacity: form.capacity,
+    base_price: form.base_price.trim() === "" ? null : Number(form.base_price),
+    notes: form.notes.trim(),
+  };
+}
 
 export default function AdminPistas() {
   const [courts, setCourts] = useState<Court[]>([]);
@@ -49,18 +70,10 @@ export default function AdminPistas() {
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState<number | null>(null);
-
-  // ID de la pista en edición inline (null = ninguna)
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editState, setEditState] = useState<EditState>({
-    name: "", type: "Exterior", capacity: 4, notes: "",
-  });
-
-  // Formulario de nueva pista
-  const [showNew, setShowNew] = useState(false);
-  const [newCourt, setNewCourt] = useState<EditState>({
-    name: "", type: "Exterior", capacity: 4, notes: "",
-  });
+  const [form, setForm] = useState<CourtForm>(emptyForm);
+  const [filterStatus, setFilterStatus] = useState<CourtStatus | "all">("all");
+  const [filterType, setFilterType] = useState<CourtType | "all">("all");
 
   async function load() {
     setLoading(true);
@@ -75,59 +88,81 @@ export default function AdminPistas() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
-  // ── Edición inline ──────────────────────────────────────────
+  const stats = useMemo(() => {
+    return {
+      total: courts.length,
+      active: courts.filter((court) => court.status === "active").length,
+      maintenance: courts.filter((court) => court.status === "maintenance").length,
+      inactive: courts.filter((court) => court.status === "inactive").length,
+    };
+  }, [courts]);
+
+  const filteredCourts = useMemo(() => {
+    return courts.filter((court) => {
+      const byStatus = filterStatus === "all" || court.status === filterStatus;
+      const byType = filterType === "all" || court.type === filterType;
+      return byStatus && byType;
+    });
+  }, [courts, filterStatus, filterType]);
+
+  function startCreate() {
+    setEditingId(null);
+    setForm(emptyForm);
+    setMsg("");
+    setError("");
+  }
 
   function startEdit(court: Court) {
     setEditingId(court.id);
-    setEditState({
-      name:     court.name,
-      type:     court.type,
+    setForm({
+      name: court.name,
+      type: court.type,
+      surface: court.surface || "",
       capacity: court.capacity,
-      notes:    court.notes ?? "",
+      base_price: court.base_price == null ? "" : String(court.base_price),
+      notes: court.notes || "",
     });
+    setMsg("");
+    setError("");
   }
 
-  function cancelEdit() {
-    setEditingId(null);
-  }
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name.trim()) return;
 
-  async function saveEdit(id: number) {
-    if (!editState.name.trim()) return;
-    setBusy(id);
+    setBusy(editingId ?? -1);
     setMsg("");
     setError("");
     try {
-      await updateAdminCourt(id, {
-        name:     editState.name.trim(),
-        type:     editState.type,
-        capacity: editState.capacity,
-        notes:    editState.notes.trim(),
-      });
-      setMsg("Pista actualizada correctamente");
+      const payload = toPayload(form);
+      if (editingId) {
+        await updateAdminCourt(editingId, payload);
+        setMsg("Pista actualizada correctamente");
+      } else {
+        await createAdminCourt(payload);
+        setMsg("Pista creada correctamente");
+      }
       setEditingId(null);
+      setForm(emptyForm);
       await load();
     } catch (e: any) {
-      setError(e?.message || "Error actualizando pista");
+      setError(e?.message || "No se pudo guardar la pista");
     } finally {
       setBusy(null);
     }
   }
 
-  // ── Cambio de estado ────────────────────────────────────────
-
-  async function handleStatusChange(court: Court) {
-    const next = STATUS_NEXT[court.status];
-    const label = STATUS_LABELS[next].toLowerCase();
-    if (!confirm(`¿Cambiar "${court.name}" a estado ${label}?`)) return;
-
+  async function setStatus(court: Court, status: CourtStatus) {
     setBusy(court.id);
     setMsg("");
     setError("");
     try {
-      await patchAdminCourtStatus(court.id, next);
-      setMsg(`"${court.name}" marcada como ${label}`);
+      await patchAdminCourtStatus(court.id, status);
+      setMsg(`"${court.name}" marcada como ${STATUS_LABELS[status].toLowerCase()}`);
       await load();
     } catch (e: any) {
       setError(e?.message || "Error cambiando estado");
@@ -136,11 +171,8 @@ export default function AdminPistas() {
     }
   }
 
-  // ── Eliminar pista ──────────────────────────────────────────
-
   async function handleDelete(court: Court) {
-    if (!confirm(`¿Eliminar la pista "${court.name}"? Esta acción no se puede deshacer.`)) return;
-
+    if (!confirm(`¿Eliminar la pista "${court.name}"? Si tiene reservas futuras, el backend lo impedirá.`)) return;
     setBusy(court.id);
     setMsg("");
     setError("");
@@ -149,32 +181,7 @@ export default function AdminPistas() {
       setMsg(`Pista "${court.name}" eliminada correctamente`);
       await load();
     } catch (e: any) {
-      setError(e?.message || "Error eliminando pista");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  // ── Crear nueva pista ───────────────────────────────────────
-
-  async function handleCreate() {
-    if (!newCourt.name.trim()) return;
-    setBusy(-1);
-    setMsg("");
-    setError("");
-    try {
-      await createAdminCourt({
-        name:     newCourt.name.trim(),
-        type:     newCourt.type,
-        capacity: newCourt.capacity,
-        notes:    newCourt.notes.trim(),
-      });
-      setMsg(`Pista "${newCourt.name.trim()}" creada correctamente`);
-      setNewCourt({ name: "", type: "Exterior", capacity: 4, notes: "" });
-      setShowNew(false);
-      await load();
-    } catch (e: any) {
-      setError(e?.message || "Error creando pista");
+      setError(e?.message || "No se pudo eliminar. Si tiene reservas futuras, desactívala o ponla en mantenimiento.");
     } finally {
       setBusy(null);
     }
@@ -182,29 +189,19 @@ export default function AdminPistas() {
 
   return (
     <div className="admin-page">
-      {/* Cabecera */}
       <div className="admin-page-header">
         <div>
           <h1 className="admin-page-title">Pistas</h1>
           <p className="admin-page-subtitle">
-            Gestiona las pistas del club — nombre, tipo, aforo y estado
+            Gestiona inventario, estados operativos y datos internos de las pistas.
           </p>
         </div>
         <div className="page-header-actions">
-          <button
-            type="button"
-            className="button-secondary"
-            onClick={load}
-            disabled={loading}
-          >
+          <button type="button" className="button-secondary" onClick={load} disabled={loading}>
             <FiRefreshCw size={13} />
             Actualizar
           </button>
-          <button
-            type="button"
-            className="button"
-            onClick={() => setShowNew((v) => !v)}
-          >
+          <button type="button" className="button" onClick={startCreate}>
             <FiPlus size={14} />
             Nueva pista
           </button>
@@ -214,245 +211,202 @@ export default function AdminPistas() {
       {msg && <div className="alert alert-success">{msg}</div>}
       {error && <div className="alert alert-error">{error}</div>}
 
-      {/* Formulario nueva pista */}
-      {showNew && (
-        <div className="admin-section">
+      <div className="court-ops-grid">
+        <form className="admin-section court-admin-form" onSubmit={save}>
           <div className="admin-section-header">
-            <h2 className="admin-section-title">Nueva pista</h2>
+            <div>
+              <span className="admin-section-kicker">{editingId ? "Edición" : "Alta de pista"}</span>
+              <h2 className="admin-section-title">{editingId ? "Editar pista" : "Nueva pista"}</h2>
+            </div>
+            {editingId && (
+              <button type="button" className="button-secondary button-sm" onClick={startCreate}>
+                <FiX size={12} />
+                Cancelar
+              </button>
+            )}
           </div>
-          <div className="court-form">
+
+          <div className="form-grid-two">
             <div className="form-group">
-              <label htmlFor="new-name">Nombre</label>
+              <label htmlFor="court-name">Nombre</label>
               <input
-                id="new-name"
-                type="text"
+                id="court-name"
                 className="input"
-                placeholder="Ej. Pista 5"
-                value={newCourt.name}
-                onChange={(e) => setNewCourt({ ...newCourt, name: e.target.value })}
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="Ej. Pista central"
               />
             </div>
             <div className="form-group">
-              <label htmlFor="new-type">Tipo</label>
+              <label htmlFor="court-type">Tipo</label>
               <select
-                id="new-type"
+                id="court-type"
                 className="input"
-                value={newCourt.type}
-                onChange={(e) =>
-                  setNewCourt({ ...newCourt, type: e.target.value as "Interior" | "Exterior" })
-                }
+                value={form.type}
+                onChange={(e) => setForm({ ...form, type: e.target.value as CourtType })}
               >
-                <option value="Exterior">Exterior</option>
-                <option value="Interior">Interior</option>
+                <option value="Exterior">Outdoor / Exterior</option>
+                <option value="Interior">Indoor / Interior</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="form-grid-three">
+            <div className="form-group">
+              <label htmlFor="court-surface">Superficie</label>
+              <input
+                id="court-surface"
+                className="input"
+                value={form.surface}
+                onChange={(e) => setForm({ ...form, surface: e.target.value })}
+                placeholder="Cristal, muro, césped..."
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="court-capacity">Capacidad</label>
+              <input
+                id="court-capacity"
+                className="input"
+                type="number"
+                min={1}
+                max={20}
+                value={form.capacity}
+                onChange={(e) => setForm({ ...form, capacity: Number(e.target.value) })}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="court-price">Precio base</label>
+              <input
+                id="court-price"
+                className="input"
+                type="number"
+                min={0}
+                step="0.01"
+                value={form.base_price}
+                onChange={(e) => setForm({ ...form, base_price: e.target.value })}
+                placeholder="Futuro"
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="court-notes">Notas internas</label>
+            <textarea
+              id="court-notes"
+              className="input court-notes-textarea"
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              placeholder="Detalles de mantenimiento, iluminación, observaciones..."
+            />
+          </div>
+
+          <button type="submit" className="button" disabled={!form.name.trim() || busy === (editingId ?? -1)}>
+            <FiCheck size={13} />
+            {busy === (editingId ?? -1) ? "Guardando..." : editingId ? "Guardar cambios" : "Crear pista"}
+          </button>
+        </form>
+
+        <section className="admin-section court-ops-panel">
+          <div className="admin-section-header">
+            <div>
+              <span className="admin-section-kicker">Operativa</span>
+              <h2 className="admin-section-title">Inventario del club</h2>
+            </div>
+          </div>
+
+          <div className="court-stat-grid">
+            <div><strong>{stats.total}</strong><span>Total</span></div>
+            <div><strong>{stats.active}</strong><span>Activas</span></div>
+            <div><strong>{stats.maintenance}</strong><span>Mantenimiento</span></div>
+            <div><strong>{stats.inactive}</strong><span>Inactivas</span></div>
+          </div>
+
+          <div className="admin-filters court-filters">
+            <div className="form-group">
+              <label htmlFor="filter-status">Estado</label>
+              <select id="filter-status" className="input" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as CourtStatus | "all")}>
+                <option value="all">Todos</option>
+                <option value="active">Activas</option>
+                <option value="maintenance">Mantenimiento</option>
+                <option value="inactive">Inactivas</option>
               </select>
             </div>
             <div className="form-group">
-              <label htmlFor="new-capacity">Aforo</label>
-              <input
-                id="new-capacity"
-                type="number"
-                className="input"
-                min={1}
-                max={10}
-                value={newCourt.capacity}
-                onChange={(e) =>
-                  setNewCourt({ ...newCourt, capacity: Number(e.target.value) })
-                }
-              />
-            </div>
-            <div className="form-group court-form-notes">
-              <label htmlFor="new-notes">Notas</label>
-              <input
-                id="new-notes"
-                type="text"
-                className="input"
-                placeholder="Opcional"
-                value={newCourt.notes}
-                onChange={(e) => setNewCourt({ ...newCourt, notes: e.target.value })}
-              />
+              <label htmlFor="filter-type">Tipo</label>
+              <select id="filter-type" className="input" value={filterType} onChange={(e) => setFilterType(e.target.value as CourtType | "all")}>
+                <option value="all">Todos</option>
+                <option value="Exterior">Outdoor / Exterior</option>
+                <option value="Interior">Indoor / Interior</option>
+              </select>
             </div>
           </div>
-          <div className="table-actions" style={{ marginTop: 12 }}>
-            <button
-              type="button"
-              className="button"
-              onClick={handleCreate}
-              disabled={!newCourt.name.trim() || busy === -1}
-            >
-              <FiCheck size={13} />
-              Crear pista
-            </button>
-            <button
-              type="button"
-              className="button-secondary"
-              onClick={() => setShowNew(false)}
-            >
-              <FiX size={13} />
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
+        </section>
+      </div>
 
-      {/* Tabla de pistas */}
-      <div className="admin-section">
+      <section className="admin-section">
+        <div className="admin-section-header">
+          <div>
+            <span className="admin-section-kicker">Pistas</span>
+            <h2 className="admin-section-title">Listado operativo</h2>
+          </div>
+          <span className="admin-count">{filteredCourts.length} pista{filteredCourts.length !== 1 ? "s" : ""}</span>
+        </div>
+
         {loading ? (
           <Loader text="Cargando pistas..." />
-        ) : courts.length === 0 ? (
-          <p className="admin-empty">No hay pistas registradas.</p>
+        ) : filteredCourts.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon"><FiActivity size={20} /></div>
+            <p className="empty-state-title">Sin pistas para este filtro</p>
+            <p className="empty-state-desc">Ajusta los filtros o crea una nueva pista para empezar a operar.</p>
+          </div>
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Tipo</th>
-                  <th>Aforo</th>
-                  <th>Notas</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {courts.map((court) => {
-                  const isEditing = editingId === court.id;
-                  const isBusy = busy === court.id;
+          <div className="court-card-grid">
+            {filteredCourts.map((court) => {
+              const isBusy = busy === court.id;
+              return (
+                <article key={court.id} className="court-admin-card">
+                  <div className="court-admin-card-top">
+                    <div>
+                      <h3>{court.name}</h3>
+                      <p>{court.type} · {court.surface || "Superficie sin definir"}</p>
+                    </div>
+                    <span className={STATUS_BADGE[court.status]}>{STATUS_LABELS[court.status]}</span>
+                  </div>
 
-                  return (
-                    <tr key={court.id}>
-                      {isEditing ? (
-                        <>
-                          <td>
-                            <input
-                              className="input input-inline"
-                              value={editState.name}
-                              onChange={(e) =>
-                                setEditState({ ...editState, name: e.target.value })
-                              }
-                              autoFocus
-                            />
-                          </td>
-                          <td>
-                            <select
-                              className="input input-inline"
-                              value={editState.type}
-                              onChange={(e) =>
-                                setEditState({
-                                  ...editState,
-                                  type: e.target.value as "Interior" | "Exterior",
-                                })
-                              }
-                            >
-                              <option value="Exterior">Exterior</option>
-                              <option value="Interior">Interior</option>
-                            </select>
-                          </td>
-                          <td>
-                            <input
-                              className="input input-inline"
-                              type="number"
-                              min={1}
-                              max={10}
-                              value={editState.capacity}
-                              onChange={(e) =>
-                                setEditState({
-                                  ...editState,
-                                  capacity: Number(e.target.value),
-                                })
-                              }
-                            />
-                          </td>
-                          <td>
-                            <input
-                              className="input input-inline"
-                              value={editState.notes}
-                              placeholder="Sin notas"
-                              onChange={(e) =>
-                                setEditState({ ...editState, notes: e.target.value })
-                              }
-                            />
-                          </td>
-                          <td>
-                            <span className={STATUS_BADGE[court.status]}>
-                              {STATUS_LABELS[court.status]}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="table-actions">
-                              <button
-                                type="button"
-                                className="button button-sm"
-                                onClick={() => saveEdit(court.id)}
-                                disabled={!editState.name.trim() || isBusy}
-                              >
-                                <FiCheck size={12} />
-                                Guardar
-                              </button>
-                              <button
-                                type="button"
-                                className="button-secondary button-sm"
-                                onClick={cancelEdit}
-                              >
-                                <FiX size={12} />
-                                Cancelar
-                              </button>
-                            </div>
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="table-email">{court.name}</td>
-                          <td>{court.type}</td>
-                          <td>{court.capacity} jug.</td>
-                          <td className="table-date">{court.notes ?? "—"}</td>
-                          <td>
-                            <span className={STATUS_BADGE[court.status]}>
-                              {STATUS_LABELS[court.status]}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="table-actions">
-                              <button
-                                type="button"
-                                className="button-secondary button-sm"
-                                onClick={() => startEdit(court)}
-                                disabled={isBusy}
-                              >
-                                <FiEdit2 size={12} />
-                                Editar
-                              </button>
-                              <button
-                                type="button"
-                                className={`button-secondary button-sm ${
-                                  court.status !== "active" ? "status-btn-activate" : ""
-                                }`}
-                                onClick={() => handleStatusChange(court)}
-                                disabled={isBusy}
-                              >
-                                {court.status === "active" ? "Desactivar" : "Activar"}
-                              </button>
-                              <button
-                                type="button"
-                                className="btn-danger button-sm"
-                                onClick={() => handleDelete(court)}
-                                disabled={isBusy}
-                                title="Eliminar pista"
-                              >
-                                <FiTrash2 size={12} />
-                                Eliminar
-                              </button>
-                            </div>
-                          </td>
-                        </>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  <div className="court-admin-meta">
+                    <span>{court.capacity} jugadores</span>
+                    <span>{court.base_price == null ? "Sin precio" : `${Number(court.base_price).toFixed(2)} EUR`}</span>
+                  </div>
+
+                  {court.notes && <p className="court-admin-notes">{court.notes}</p>}
+
+                  <div className="court-admin-actions">
+                    <button type="button" className="button-secondary button-sm" onClick={() => startEdit(court)} disabled={isBusy}>
+                      <FiEdit2 size={12} />
+                      Editar
+                    </button>
+                    <button type="button" className="button-secondary button-sm status-btn-activate" onClick={() => setStatus(court, "active")} disabled={isBusy || court.status === "active"}>
+                      Activar
+                    </button>
+                    <button type="button" className="button-secondary button-sm" onClick={() => setStatus(court, "maintenance")} disabled={isBusy || court.status === "maintenance"}>
+                      <FiTool size={12} />
+                      Mant.
+                    </button>
+                    <button type="button" className="button-secondary button-sm" onClick={() => setStatus(court, "inactive")} disabled={isBusy || court.status === "inactive"}>
+                      Desactivar
+                    </button>
+                    <button type="button" className="btn-danger button-sm" onClick={() => handleDelete(court)} disabled={isBusy}>
+                      <FiTrash2 size={12} />
+                      Eliminar
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

@@ -47,6 +47,7 @@ test("POST /reservations con franja ya ocupada devuelve 409", async () => {
     .mockResolvedValueOnce([[{ slot_minutes: 90, max_days_ahead: 30 }]])  // config del club (límite de días)
     .mockResolvedValueOnce([[{ id: 1 }]])                                   // la pista existe y está activa
     .mockResolvedValueOnce([[{ opening_time: "09:00", closing_time: "21:00", slot_minutes: 90 }]]) // horarios del club
+    .mockResolvedValueOnce([[]])                                             // no hay bloqueos en esa franja
     .mockResolvedValueOnce([[{ id: 99 }]]);                                 // ya existe reserva en esa franja
 
   const res = await request(app)

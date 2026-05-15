@@ -5,25 +5,55 @@ const pool    = require("../db");
 
 const router = express.Router();
 
+function cleanText(value) {
+  const text = String(value || "").trim();
+  return text || null;
+}
+
+function buildDisplayName(firstName, _lastName, email) {
+  return firstName || email.split("@")[0];
+}
+
+function isValidPhone(phone) {
+  if (!phone) return false;
+  const compact = String(phone).replace(/[\s().-]/g, "");
+  return /^\+?\d{7,15}$/.test(compact);
+}
+
 // ── POST /auth/register ───────────────────────────────────────
 // Registra un usuario nuevo con email, contraseña y nombre opcional
 router.post("/register", async (req, res) => {
   try {
     const emailRaw = req.body?.email;
     const passRaw  = req.body?.password;
-    const nameRaw  = req.body?.name;
+    const firstNameRaw = req.body?.firstName || req.body?.first_name || req.body?.name;
+    const lastNameRaw  = req.body?.lastName || req.body?.last_name;
+    const phoneRaw     = req.body?.phone;
+    const levelRaw     = req.body?.gameLevel || req.body?.game_level;
+    const sideRaw      = req.body?.preferredSide || req.body?.preferred_side;
+    const acceptedTerms = req.body?.acceptedTerms === true || req.body?.accepted_terms === true ? 1 : 0;
     const accountTypeRaw = req.body?.accountType || req.body?.account_type || "player";
 
     const email    = String(emailRaw || "").trim().toLowerCase();
     const password = String(passRaw  || "");
     const accountType = String(accountTypeRaw || "").trim();
     const role = accountType === "club" ? "admin" : "user";
-    // Si no llega name, usamos la parte del email antes del @ como nombre por defecto
-    const name     = String(nameRaw || "").trim() || email.split("@")[0];
+    const firstName = cleanText(firstNameRaw);
+    const lastName  = cleanText(lastNameRaw);
+    const phone     = cleanText(phoneRaw);
+    const gameLevel = cleanText(levelRaw);
+    const preferredSide = cleanText(sideRaw);
+    const name = buildDisplayName(firstName, lastName, email);
 
     // Validaciones básicas antes de tocar la base de datos
-    if (!email || !password) {
-      return res.status(400).json({ ok: false, error: "Email y contraseña obligatorios" });
+    if (!email || !password || !firstName) {
+      return res.status(400).json({ ok: false, error: "Nombre, email y contraseña son obligatorios" });
+    }
+    if (accountType === "player" && !isValidPhone(phone)) {
+      return res.status(400).json({ ok: false, error: "El teléfono es obligatorio para jugadores" });
+    }
+    if (phone && !isValidPhone(phone)) {
+      return res.status(400).json({ ok: false, error: "El teléfono no tiene un formato válido" });
     }
 
     // Comprobamos que el email tiene un formato mínimamente válido
@@ -51,9 +81,31 @@ router.post("/register", async (req, res) => {
     // Ciframos la contraseña antes de guardarla (nunca se guarda en texto plano)
     const password_hash = await bcrypt.hash(password, 10);
 
+    const allowedLevels = [null, "principiante", "intermedio", "avanzado"];
+    const allowedSides = [null, "derecha", "reves", "indiferente"];
+    if (!allowedLevels.includes(gameLevel)) {
+      return res.status(400).json({ ok: false, error: "Nivel de juego inválido" });
+    }
+    if (!allowedSides.includes(preferredSide)) {
+      return res.status(400).json({ ok: false, error: "Lado preferido inválido" });
+    }
+
     await pool.query(
-      "INSERT INTO users (name, email, password_hash, role, club_id) VALUES (?, ?, ?, ?, NULL)",
-      [name, email, password_hash, role]
+      `INSERT INTO users
+         (name, last_name, email, phone, game_level, preferred_side, accepted_terms, terms_accepted_at, password_hash, role, club_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+      [
+        name,
+        lastName,
+        email,
+        phone,
+        accountType === "player" ? gameLevel : null,
+        accountType === "player" ? preferredSide : null,
+        acceptedTerms,
+        acceptedTerms ? new Date() : null,
+        password_hash,
+        role,
+      ]
     );
 
     return res.json({ ok: true, email, role, needs_onboarding: role === "admin" });

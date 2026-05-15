@@ -11,6 +11,7 @@ type ClubForm = {
   image_url: string;
   logo_url: string;
   banner_url: string;
+  whatsapp_url: string;
   status: "active" | "inactive" | "suspended";
 };
 
@@ -41,6 +42,7 @@ const emptyForm: ClubForm = {
   image_url: "",
   logo_url: "",
   banner_url: "",
+  whatsapp_url: "",
   status: "active",
 };
 
@@ -81,6 +83,7 @@ export default function AdminClub() {
       image_url: nextClub.image_url || "",
       logo_url: nextClub.logo_url || nextClub.image_url || "",
       banner_url: nextClub.banner_url || nextClub.image_url || "",
+      whatsapp_url: nextClub.whatsapp_url || "",
       status: nextClub.status || "active",
     });
   }
@@ -137,6 +140,7 @@ export default function AdminClub() {
         image_url: form.image_url.trim(),
         logo_url: form.logo_url.trim(),
         banner_url: form.banner_url.trim(),
+        whatsapp_url: form.whatsapp_url.trim(),
         status: form.status,
       });
       applyClub(data.club);
@@ -275,6 +279,18 @@ export default function AdminClub() {
                 onChange={(e) => setForm({ ...form, banner_url: e.target.value })}
                 placeholder="/clubs/banner.jpg o URL"
               />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="admin-club-whatsapp">WhatsApp del club</label>
+              <input
+                id="admin-club-whatsapp"
+                className="input"
+                value={form.whatsapp_url}
+                onChange={(e) => setForm({ ...form, whatsapp_url: e.target.value })}
+                placeholder="+34 600 000 000 o https://wa.me/..."
+              />
+              <span className="field-hint">Se mostrará a los jugadores como canal de contacto del club.</span>
             </div>
 
             <div className="form-group">
@@ -492,6 +508,10 @@ export default function AdminClub() {
               <div>
                 <span>Pistas</span>
                 <strong>{club?.court_count ?? 0}</strong>
+              </div>
+              <div>
+                <span>WhatsApp</span>
+                <strong>{form.whatsapp_url ? "Configurado" : "Sin configurar"}</strong>
               </div>
               <div>
                 <span>Estado</span>

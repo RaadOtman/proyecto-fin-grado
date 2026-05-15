@@ -82,10 +82,10 @@ export default function Login() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28 }}
     >
-      <div className="section-panel" style={{ maxWidth: 420, margin: "0 auto" }}>
-        <div style={{ marginBottom: 16 }}>
+      <div className="section-panel auth-card">
+        <div className="auth-card-header">
           <span className="badge">Padex</span>
-          <h1 className="page-title" style={{ fontSize: 28, marginTop: 12 }}>
+          <h1 className="page-title">
             Iniciar sesión
           </h1>
           <p className="page-subtitle">
@@ -96,13 +96,13 @@ export default function Login() {
         {/* Si ya tiene sesión, mostramos accesos directos en vez del formulario */}
         {isAuthenticated ? (
           <div className="reservation-card">
-            <p style={{ marginTop: 0 }}>
+            <p className="auth-session-copy">
               Has iniciado sesión como <strong>{userEmail}</strong>.
             </p>
 
             {msg && <div className="alert alert-success">{msg}</div>}
 
-            <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+            <div className="auth-action-stack">
               <button
                 type="button"
                 className="button"
@@ -129,8 +129,8 @@ export default function Login() {
             </div>
           </div>
         ) : (
-          <form onSubmit={onSubmit} style={{ display: "grid", gap: 14 }}>
-            <div>
+          <form onSubmit={onSubmit} className="auth-form">
+            <div className="form-group">
               <label htmlFor="login-email">Correo electrónico</label>
               <input
                 id="login-email"
@@ -143,7 +143,7 @@ export default function Login() {
               />
             </div>
 
-            <div>
+            <div className="form-group">
               <label htmlFor="login-password">Contraseña</label>
               <input
                 id="login-password"

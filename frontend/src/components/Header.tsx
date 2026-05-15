@@ -54,10 +54,28 @@ export default function Header() {
 
           {isAuthenticated && (
             <NavLink
+              to="/historial"
+              className={({ isActive }) => (isActive ? "active" : "")}
+            >
+              Historial
+            </NavLink>
+          )}
+
+          {isAuthenticated && (
+            <NavLink
               to="/mi-club"
               className={({ isActive }) => (isActive ? "active" : "")}
             >
               Mi club
+            </NavLink>
+          )}
+
+          {isAuthenticated && (
+            <NavLink
+              to="/perfil"
+              className={({ isActive }) => (isActive ? "active" : "")}
+            >
+              Mi perfil
             </NavLink>
           )}
 

@@ -9,7 +9,9 @@ import AdminLayout from "./components/admin/AdminLayout";
 import Home from "./pages/Home";
 import Reserve from "./pages/Reserve";
 import MyReservations from "./pages/MyReservations";
+import History from "./pages/History";
 import MiClub from "./pages/MiClub";
+import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Onboarding from "./pages/Onboarding";
@@ -18,6 +20,7 @@ import AdminUsuarios from "./pages/admin/AdminUsuarios";
 import AdminReservas from "./pages/admin/AdminReservas";
 import AdminPistas from "./pages/admin/AdminPistas";
 import AdminClub from "./pages/admin/AdminClub";
+import AdminBloqueos from "./pages/admin/AdminBloqueos";
 
 export default function App() {
   return (
@@ -40,8 +43,16 @@ export default function App() {
             element={<ProtectedRoute><MyReservations /></ProtectedRoute>}
           />
           <Route
+            path="/historial"
+            element={<ProtectedRoute><History /></ProtectedRoute>}
+          />
+          <Route
             path="/mi-club"
             element={<ProtectedRoute><MiClub /></ProtectedRoute>}
+          />
+          <Route
+            path="/perfil"
+            element={<ProtectedRoute><Profile /></ProtectedRoute>}
           />
 
           {/* Rutas públicas de autenticación */}
@@ -64,6 +75,7 @@ export default function App() {
           <Route path="usuarios" element={<AdminUsuarios />} />
           <Route path="reservas" element={<AdminReservas />} />
           <Route path="pistas" element={<AdminPistas />} />
+          <Route path="bloqueos" element={<AdminBloqueos />} />
           <Route path="club" element={<AdminClub />} />
         </Route>
 

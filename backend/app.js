@@ -84,6 +84,12 @@ function toHHMM(t) {
   return String(t || "").slice(0, 5);
 }
 
+function addMinutes(timeHHMM, minutes) {
+  const [h, m] = timeHHMM.split(":").map(Number);
+  const total = h * 60 + m + minutes;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
 async function getDefaultClubId() {
   const [rows] = await pool.query(
     "SELECT id FROM clubs WHERE name = 'PADEX Club' ORDER BY id ASC LIMIT 1"
@@ -124,7 +130,7 @@ async function getTimeSlots(clubId) {
      LIMIT 1`,
     [clubId]
   );
-  if (!cfg) return [];
+  if (!cfg) return { slots: [], slotMinutes: 90 };
   const slots = [];
 
   const ranges = cfg.schedule_mode === "split"
@@ -149,7 +155,7 @@ async function getTimeSlots(clubId) {
       m %= 60;
     }
   }
-  return [...new Set(slots)];
+  return { slots: [...new Set(slots)], slotMinutes: cfg.slot_minutes };
 }
 
 // ── Rutas base ────────────────────────────────────────────────
@@ -204,7 +210,7 @@ app.get("/availability", async (req, res) => {
       [clubId]
     );
 
-    const timeSlots = await getTimeSlots(clubId);
+    const { slots: timeSlots, slotMinutes } = await getTimeSlots(clubId);
 
     const [rows] = await pool.query(
       `SELECT court_id, start_time
@@ -212,6 +218,15 @@ app.get("/availability", async (req, res) => {
        WHERE  club_id = ?
          AND  reservation_date = ?
          AND  status = 'confirmed'`,
+      [clubId, date]
+    );
+
+    const [blockRows] = await pool.query(
+      `SELECT court_id, start_time, end_time
+       FROM   court_blocks
+       WHERE  club_id = ?
+         AND  block_date = ?
+         AND  is_active = 1`,
       [clubId, date]
     );
 
@@ -226,7 +241,11 @@ app.get("/availability", async (req, res) => {
       const taken = occupied.get(court.id) || new Set();
       const slots = timeSlots.map((time) => ({
         time,
-        status: taken.has(time) ? "OCCUPIED" : "FREE",
+        status: taken.has(time) || blockRows.some((block) => {
+          if (block.court_id !== null && Number(block.court_id) !== Number(court.id)) return false;
+          const slotEnd = addMinutes(time, slotMinutes);
+          return toHHMM(block.start_time) < slotEnd && toHHMM(block.end_time) > time;
+        }) ? "OCCUPIED" : "FREE",
       }));
       return { ...court, slots };
     });

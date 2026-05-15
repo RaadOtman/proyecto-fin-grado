@@ -22,6 +22,7 @@ type Club = {
   description: string | null;
   image_url: string | null;
   maps_url: string | null;
+  whatsapp_url: string | null;
   court_count: number | null;
 };
 
@@ -255,6 +256,17 @@ export default function MiClub() {
                           <FiClock />
                           Ver disponibilidad
                         </button>
+                        {previewClub.whatsapp_url && (
+                          <a
+                            className="button-secondary"
+                            href={previewClub.whatsapp_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <FiExternalLink />
+                            Contactar por WhatsApp
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -279,6 +291,17 @@ export default function MiClub() {
                         <FiClock />
                         Ver disponibilidad
                       </button>
+                      {previewClub.whatsapp_url && (
+                        <a
+                          className="button-secondary"
+                          href={previewClub.whatsapp_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <FiExternalLink />
+                          Contactar por WhatsApp
+                        </a>
+                      )}
                     </div>
                   </div>
                 )}
@@ -339,6 +362,17 @@ export default function MiClub() {
                       >
                         <FiExternalLink size={14} />
                         Ver ubicación
+                      </a>
+                    )}
+                    {previewClub.whatsapp_url && (
+                      <a
+                        href={previewClub.whatsapp_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="club-maps-btn"
+                      >
+                        <FiExternalLink size={14} />
+                        Contactar por WhatsApp
                       </a>
                     )}
                   </div>

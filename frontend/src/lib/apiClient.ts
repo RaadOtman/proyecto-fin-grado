@@ -39,12 +39,24 @@ export async function loginUser(email: string, password: string) {
   return readJson(res);
 }
 
-export async function registerUser(email: string, password: string, accountType: "player" | "club" = "player") {
+export type RegisterInput = {
+  email: string;
+  password: string;
+  accountType?: "player" | "club";
+  firstName: string;
+  lastName?: string;
+  phone?: string;
+  gameLevel?: "principiante" | "intermedio" | "avanzado" | "";
+  preferredSide?: "derecha" | "reves" | "indiferente" | "";
+  acceptedTerms?: boolean;
+};
+
+export async function registerUser(input: RegisterInput) {
   const res = await fetch(`${API_BASE_URL}/auth/register`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, accountType }),
+    body: JSON.stringify(input),
   });
 
   return readJson(res);
@@ -83,6 +95,14 @@ export async function getMyReservations() {
   return readJson(res);
 }
 
+export async function getReservationHistory() {
+  const res = await fetch(`${API_BASE_URL}/reservations/history`, {
+    credentials: "include",
+  });
+
+  return readJson(res);
+}
+
 export async function cancelReservation(id: number) {
   const res = await fetch(`${API_BASE_URL}/reservations/${id}`, {
     method: "DELETE",
@@ -110,6 +130,36 @@ export async function patchUserClub(userId: number, clubId: number | null) {
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ clubId }),
+  });
+  return readJson(res);
+}
+
+export type UserProfileInput = {
+  name: string;
+  lastName?: string;
+  phone?: string;
+  gameLevel?: "principiante" | "intermedio" | "avanzado" | "";
+  preferredSide?: "derecha" | "reves" | "indiferente" | "";
+  avatarUrl?: string;
+  instagramUrl?: string;
+  linkedinUrl?: string;
+  websiteUrl?: string;
+  bio?: string;
+};
+
+export async function getMyProfile() {
+  const res = await fetch(`${API_BASE_URL}/users/me`, {
+    credentials: "include",
+  });
+  return readJson(res);
+}
+
+export async function updateMyProfile(input: UserProfileInput) {
+  const res = await fetch(`${API_BASE_URL}/users/me`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
   });
   return readJson(res);
 }

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { FiSearch, FiShield, FiTrash2, FiRefreshCw, FiToggleLeft, FiToggleRight } from "react-icons/fi";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { FiExternalLink, FiEye, FiSearch, FiShield, FiTrash2, FiRefreshCw, FiToggleLeft, FiToggleRight } from "react-icons/fi";
 import {
   getAdminUsers,
   patchAdminUserRole,
@@ -12,11 +12,23 @@ import Loader from "../../components/Loader";
 type User = {
   id: number;
   name: string | null;
+  last_name: string | null;
   email: string;
   phone: string | null;
+  game_level: string | null;
+  preferred_side: string | null;
+  avatar_url: string | null;
+  instagram_url: string | null;
+  linkedin_url: string | null;
+  website_url: string | null;
+  bio: string | null;
   role: "user" | "admin";
+  role_in_club: "member" | "staff" | "admin";
+  club_status: "active" | "pending" | "blocked";
   is_active: 0 | 1;
+  joined_at: string;
   created_at: string;
+  reservations_count: number;
 };
 
 function formatDate(iso: string) {
@@ -32,6 +44,18 @@ const ROLE_LABELS: Record<User["role"], string> = {
   user: "Usuario",
 };
 
+const CLUB_ROLE_LABELS: Record<string, string> = {
+  admin: "Admin",
+  staff: "Staff",
+  member: "Miembro",
+};
+
+const CLUB_STATUS_LABELS: Record<string, string> = {
+  active: "Activo",
+  pending: "Pendiente",
+  blocked: "Bloqueado",
+};
+
 export default function AdminUsuarios() {
   const { userEmail } = useAuth();
 
@@ -41,6 +65,7 @@ export default function AdminUsuarios() {
   const [msg, setMsg] = useState("");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   async function load() {
     setLoading(true);
@@ -66,20 +91,21 @@ export default function AdminUsuarios() {
     return users.filter(
       (u) =>
         u.email.toLowerCase().includes(q) ||
-        (u.name || "").toLowerCase().includes(q)
+        (u.name || "").toLowerCase().includes(q) ||
+        (u.phone || "").toLowerCase().includes(q)
     );
   }, [users, search]);
 
   async function handleRoleChange(user: User) {
-    const nextRole: User["role"] = user.role === "admin" ? "user" : "admin";
-    if (!confirm(`¿Cambiar el rol de ${user.email} a '${ROLE_LABELS[nextRole]}'?`)) return;
+    const nextRole: User["role"] = user.role_in_club === "admin" ? "user" : "admin";
+    if (!confirm(`¿Cambiar el rol de ${user.email} a ${ROLE_LABELS[nextRole]} en este club?`)) return;
 
     setBusy(user.id);
     setMsg("");
     setError("");
     try {
       await patchAdminUserRole(user.id, nextRole);
-      setMsg(`Rol de ${user.email} actualizado a '${ROLE_LABELS[nextRole]}'`);
+      setMsg(`Rol de ${user.email} actualizado en este club`);
       await load();
     } catch (e: any) {
       setError(e?.message || "Error cambiando rol");
@@ -89,16 +115,16 @@ export default function AdminUsuarios() {
   }
 
   async function handleToggleActive(user: User) {
-    const next: 0 | 1 = user.is_active ? 0 : 1;
-    const action = next ? "activar" : "desactivar";
-    if (!confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} la cuenta de ${user.email}?`)) return;
+    const next: 0 | 1 = user.club_status === "active" ? 0 : 1;
+    const action = next ? "activar" : "bloquear";
+    if (!confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} a ${user.email} en este club?`)) return;
 
     setBusy(user.id);
     setMsg("");
     setError("");
     try {
       await patchAdminUserActive(user.id, next);
-      setMsg(`Cuenta de ${user.email} ${next ? "activada" : "desactivada"}`);
+      setMsg(`Relación de ${user.email} ${next ? "activada" : "bloqueada"}`);
       await load();
     } catch (e: any) {
       setError(e?.message || "Error cambiando estado");
@@ -108,14 +134,14 @@ export default function AdminUsuarios() {
   }
 
   async function handleDelete(user: User) {
-    if (!confirm(`¿Eliminar el usuario ${user.email}? Esta acción no se puede deshacer.`)) return;
+    if (!confirm(`¿Retirar a ${user.email} de este club? Su cuenta global no se eliminará.`)) return;
 
     setBusy(user.id);
     setMsg("");
     setError("");
     try {
       await deleteAdminUser(user.id);
-      setMsg(`Usuario ${user.email} eliminado`);
+      setMsg(`Usuario ${user.email} retirado del club`);
       await load();
     } catch (e: any) {
       setError(e?.message || "Error eliminando usuario");
@@ -133,7 +159,7 @@ export default function AdminUsuarios() {
         <div>
           <h1 className="admin-page-title">Usuarios</h1>
           <p className="admin-page-subtitle">
-            Gestiona los usuarios registrados en el club
+            Gestiona miembros, perfiles deportivos y permisos dentro de este club.
           </p>
         </div>
         <button
@@ -173,18 +199,18 @@ export default function AdminUsuarios() {
           <Loader text="Cargando usuarios..." />
         ) : filtered.length === 0 ? (
           <p className="admin-empty">
-            {search ? "No hay usuarios que coincidan con la búsqueda." : "No hay usuarios registrados."}
+            {search ? "No hay usuarios que coincidan con la búsqueda." : "Todavía no hay usuarios asociados a este club."}
           </p>
         ) : (
           <div className="table-wrap">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Nombre / Email</th>
-                  <th>Teléfono</th>
-                  <th>Rol</th>
-                  <th>Estado</th>
-                  <th>Registro</th>
+                  <th>Usuario</th>
+                  <th>Perfil</th>
+                  <th>Relación</th>
+                  <th>Reservas</th>
+                  <th>Alta</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
@@ -192,62 +218,113 @@ export default function AdminUsuarios() {
                 {filtered.map((u) => {
                   const me = isMe(u);
                   const isBusy = busy === u.id;
+                  const activeInClub = u.club_status === "active";
+                  const fullName = [u.name, u.last_name].filter(Boolean).join(" ").trim() || u.email;
                   return (
-                    <tr key={u.id} className={u.is_active ? "" : "table-row-muted"}>
-                      <td>
-                        <div className="table-email">{u.name}</div>
-                        <div className="table-sub">{u.email}</div>
-                        {me && <span className="table-you">tú</span>}
-                      </td>
-                      <td>{u.phone || "—"}</td>
-                      <td>
-                        <span
-                          className={`badge ${u.role === "admin" ? "badge-admin" : "badge-neutral"}`}
-                        >
-                          {ROLE_LABELS[u.role]}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`badge ${u.is_active ? "badge-active" : "badge-inactive"}`}>
-                          {u.is_active ? "Activo" : "Inactivo"}
-                        </span>
-                      </td>
-                      <td className="table-date">{formatDate(u.created_at)}</td>
-                      <td>
-                        <div className="table-actions">
-                          <button
-                            type="button"
-                            className="button-secondary button-sm"
-                            onClick={() => handleRoleChange(u)}
-                            disabled={me || isBusy}
-                            title={me ? "No puedes cambiar tu propio rol" : `Cambiar rol (actual: ${ROLE_LABELS[u.role]})`}
-                          >
-                            <FiShield size={12} />
-                            Rol
-                          </button>
-                          <button
-                            type="button"
-                            className="button-secondary button-sm"
-                            onClick={() => handleToggleActive(u)}
-                            disabled={me || isBusy}
-                            title={me ? "No puedes desactivar tu propia cuenta" : u.is_active ? "Desactivar cuenta" : "Activar cuenta"}
-                          >
-                            {u.is_active ? <FiToggleRight size={12} /> : <FiToggleLeft size={12} />}
-                            {u.is_active ? "Desactivar" : "Activar"}
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-danger button-sm"
-                            onClick={() => handleDelete(u)}
-                            disabled={me || isBusy}
-                            title={me ? "No puedes eliminarte a ti mismo" : undefined}
-                          >
-                            <FiTrash2 size={12} />
-                            Eliminar
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                    <Fragment key={u.id}>
+                      <tr className={activeInClub ? "" : "table-row-muted"}>
+                        <td>
+                          <div className="admin-user-cell">
+                            <div className="admin-user-avatar">
+                              {u.avatar_url ? <img src={u.avatar_url} alt={fullName} /> : <span>{fullName.slice(0, 1).toUpperCase()}</span>}
+                            </div>
+                            <div>
+                              <div className="table-email">{fullName}</div>
+                              <div className="table-sub">{u.email}</div>
+                              {me && <span className="table-you">tú</span>}
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="user-profile-stack">
+                            <span>{u.phone || "Sin teléfono"}</span>
+                            <span>
+                              {[u.game_level, u.preferred_side && `Lado ${u.preferred_side}`]
+                                .filter(Boolean)
+                                .join(" · ") || "Perfil deportivo pendiente"}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="user-badge-stack">
+                            <span className={`badge ${u.role_in_club === "admin" ? "badge-admin" : "badge-neutral"}`}>
+                              {CLUB_ROLE_LABELS[u.role_in_club] || u.role_in_club}
+                            </span>
+                            <span className={`badge ${activeInClub ? "badge-active" : "badge-inactive"}`}>
+                              {CLUB_STATUS_LABELS[u.club_status] || u.club_status}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="table-date">{Number(u.reservations_count || 0)}</td>
+                        <td className="table-date">{formatDate(u.joined_at || u.created_at)}</td>
+                        <td>
+                          <div className="table-actions">
+                            <button
+                              type="button"
+                              className="button-secondary button-sm"
+                              onClick={() => setExpandedId(expandedId === u.id ? null : u.id)}
+                            >
+                              <FiEye size={12} />
+                              Detalle
+                            </button>
+                            <button
+                              type="button"
+                              className="button-secondary button-sm"
+                              onClick={() => handleRoleChange(u)}
+                              disabled={me || isBusy}
+                              title={me ? "No puedes cambiar tu propio rol" : "Cambiar rol en este club"}
+                            >
+                              <FiShield size={12} />
+                              Rol
+                            </button>
+                            <button
+                              type="button"
+                              className="button-secondary button-sm"
+                              onClick={() => handleToggleActive(u)}
+                              disabled={me || isBusy}
+                              title={me ? "No puedes bloquearte a ti mismo" : activeInClub ? "Bloquear en el club" : "Activar en el club"}
+                            >
+                              {activeInClub ? <FiToggleRight size={12} /> : <FiToggleLeft size={12} />}
+                              {activeInClub ? "Bloquear" : "Activar"}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-danger button-sm"
+                              onClick={() => handleDelete(u)}
+                              disabled={me || isBusy}
+                              title={me ? "No puedes retirarte a ti mismo" : undefined}
+                            >
+                              <FiTrash2 size={12} />
+                              Retirar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedId === u.id && (
+                        <tr className="user-detail-row">
+                          <td colSpan={6}>
+                            <div className="user-detail-panel">
+                              <span><strong>Email</strong>{u.email}</span>
+                              <span><strong>Teléfono</strong>{u.phone || "No indicado"}</span>
+                              <span><strong>Nivel</strong>{u.game_level || "No indicado"}</span>
+                              <span><strong>Lado</strong>{u.preferred_side || "No indicado"}</span>
+                              <span><strong>Rol global</strong>{ROLE_LABELS[u.role]}</span>
+                              <span><strong>Alta en PADEX</strong>{formatDate(u.created_at)}</span>
+                              <span><strong>Bio</strong>{u.bio || "No indicada"}</span>
+                              <span>
+                                <strong>Redes</strong>
+                                <div className="admin-user-links">
+                                  {u.instagram_url && <a href={u.instagram_url} target="_blank" rel="noopener noreferrer"><FiExternalLink /> Instagram</a>}
+                                  {u.linkedin_url && <a href={u.linkedin_url} target="_blank" rel="noopener noreferrer"><FiExternalLink /> LinkedIn</a>}
+                                  {u.website_url && <a href={u.website_url} target="_blank" rel="noopener noreferrer"><FiExternalLink /> Web</a>}
+                                  {!u.instagram_url && !u.linkedin_url && !u.website_url && "Sin redes"}
+                                </div>
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })}
               </tbody>

@@ -9,7 +9,7 @@ const router = express.Router();
 router.get("/", async (_req, res) => {
   try {
     const [clubs] = await pool.query(
-      `SELECT id, name, city, description, image_url, maps_url, court_count
+      `SELECT id, name, city, description, image_url, maps_url, whatsapp_url, court_count
        FROM   clubs
        WHERE  name != 'PADEX Club'
        ORDER  BY name ASC`
@@ -31,7 +31,7 @@ router.get("/:id", async (req, res) => {
     }
 
     const [rows] = await pool.query(
-      `SELECT id, name, city, description, image_url, maps_url, court_count
+      `SELECT id, name, city, description, image_url, maps_url, whatsapp_url, court_count
        FROM   clubs
        WHERE  id = ?
          AND  name != 'PADEX Club'

@@ -36,6 +36,7 @@ export async function updateAdminClub(data: {
   image_url: string;
   logo_url: string;
   banner_url: string;
+  whatsapp_url: string;
   status: "active" | "inactive" | "suspended";
 }) {
   const res = await fetch(`${API_BASE_URL}/admin/club`, {
@@ -135,6 +136,59 @@ export async function deleteAdminReservation(id: number) {
   return readJson(res);
 }
 
+// ─── Bloqueos ─────────────────────────────────────────────────
+
+export type AdminBlockInput = {
+  court_id: number | null;
+  block_date: string;
+  start_time: string;
+  end_time: string;
+  reason: string;
+  block_type: "maintenance" | "event" | "closure" | "internal";
+  is_active: 0 | 1;
+};
+
+export async function getAdminBlocks(filters?: { block_date?: string; court_id?: number; is_active?: 0 | 1 }) {
+  const params = new URLSearchParams();
+  if (filters?.block_date) params.set("block_date", filters.block_date);
+  if (filters?.court_id) params.set("court_id", String(filters.court_id));
+  if (filters?.is_active !== undefined) params.set("is_active", String(filters.is_active));
+
+  const query = params.toString() ? `?${params.toString()}` : "";
+  const res = await fetch(`${API_BASE_URL}/admin/blocks${query}`, {
+    credentials: "include",
+  });
+  return readJson(res);
+}
+
+export async function createAdminBlock(data: AdminBlockInput) {
+  const res = await fetch(`${API_BASE_URL}/admin/blocks`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return readJson(res);
+}
+
+export async function updateAdminBlock(id: number, data: AdminBlockInput) {
+  const res = await fetch(`${API_BASE_URL}/admin/blocks/${id}`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return readJson(res);
+}
+
+export async function deleteAdminBlock(id: number) {
+  const res = await fetch(`${API_BASE_URL}/admin/blocks/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  return readJson(res);
+}
+
 // ─── Pistas ───────────────────────────────────────────────────
 
 export async function getAdminCourts() {
@@ -147,7 +201,9 @@ export async function getAdminCourts() {
 export async function createAdminCourt(data: {
   name: string;
   type: string;
+  surface: string;
   capacity: number;
+  base_price: number | null;
   notes: string;
 }) {
   const res = await fetch(`${API_BASE_URL}/admin/courts`, {
@@ -161,7 +217,7 @@ export async function createAdminCourt(data: {
 
 export async function updateAdminCourt(
   id: number,
-  data: { name: string; type: string; capacity: number; notes: string }
+  data: { name: string; type: string; surface: string; capacity: number; base_price: number | null; notes: string }
 ) {
   const res = await fetch(`${API_BASE_URL}/admin/courts/${id}`, {
     method: "PUT",
