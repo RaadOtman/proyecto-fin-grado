@@ -5,19 +5,6 @@ const pool    = require("../db");
 
 const router = express.Router();
 
-async function getDefaultClubId() {
-  const [existing] = await pool.query(
-    "SELECT id FROM clubs WHERE name = 'PADEX Club' ORDER BY id ASC LIMIT 1"
-  );
-  if (existing.length > 0) return existing[0].id;
-
-  const [result] = await pool.query(
-    `INSERT INTO clubs (name, city, address, description, image_url, maps_url, court_count)
-     VALUES ('PADEX Club', 'Sin ciudad', NULL, 'Club por defecto migrado para compatibilidad multi-club.', NULL, NULL, 0)`
-  );
-  return result.insertId;
-}
-
 // ── POST /auth/register ───────────────────────────────────────
 // Registra un usuario nuevo con email, contraseña y nombre opcional
 router.post("/register", async (req, res) => {
@@ -25,9 +12,12 @@ router.post("/register", async (req, res) => {
     const emailRaw = req.body?.email;
     const passRaw  = req.body?.password;
     const nameRaw  = req.body?.name;
+    const accountTypeRaw = req.body?.accountType || req.body?.account_type || "player";
 
     const email    = String(emailRaw || "").trim().toLowerCase();
     const password = String(passRaw  || "");
+    const accountType = String(accountTypeRaw || "").trim();
+    const role = accountType === "club" ? "admin" : "user";
     // Si no llega name, usamos la parte del email antes del @ como nombre por defecto
     const name     = String(nameRaw || "").trim() || email.split("@")[0];
 
@@ -45,6 +35,9 @@ router.post("/register", async (req, res) => {
     if (password.length < 4) {
       return res.status(400).json({ ok: false, error: "La contraseña debe tener mínimo 4 caracteres" });
     }
+    if (!["player", "club"].includes(accountType)) {
+      return res.status(400).json({ ok: false, error: "Tipo de cuenta inválido" });
+    }
 
     // Comprobamos si el email ya está registrado
     const [exists] = await pool.query(
@@ -58,14 +51,12 @@ router.post("/register", async (req, res) => {
     // Ciframos la contraseña antes de guardarla (nunca se guarda en texto plano)
     const password_hash = await bcrypt.hash(password, 10);
 
-    const clubId = await getDefaultClubId();
-
     await pool.query(
-      "INSERT INTO users (name, email, password_hash, club_id) VALUES (?, ?, ?, ?)",
-      [name, email, password_hash, clubId]
+      "INSERT INTO users (name, email, password_hash, role, club_id) VALUES (?, ?, ?, ?, NULL)",
+      [name, email, password_hash, role]
     );
 
-    return res.json({ ok: true, email });
+    return res.json({ ok: true, email, role, needs_onboarding: role === "admin" });
   } catch (e) {
     console.error("REGISTER ERROR:", e);
     return res.status(500).json({ ok: false, error: "Error al registrar usuario" });
@@ -104,13 +95,6 @@ router.post("/login", async (req, res) => {
     }
 
     const user = rows[0];
-    if (!user.club_id) {
-      user.club_id = await getDefaultClubId();
-      await pool.query(
-        "UPDATE users SET club_id = ? WHERE id = ?",
-        [user.club_id, user.id]
-      );
-    }
 
     // El admin puede desactivar cuentas desde el panel
     if (!user.is_active) {

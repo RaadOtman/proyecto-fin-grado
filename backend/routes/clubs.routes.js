@@ -11,6 +11,7 @@ router.get("/", async (_req, res) => {
     const [clubs] = await pool.query(
       `SELECT id, name, city, description, image_url, maps_url, court_count
        FROM   clubs
+       WHERE  name != 'PADEX Club'
        ORDER  BY name ASC`
     );
     return res.json({ ok: true, clubs });
@@ -33,6 +34,7 @@ router.get("/:id", async (req, res) => {
       `SELECT id, name, city, description, image_url, maps_url, court_count
        FROM   clubs
        WHERE  id = ?
+         AND  name != 'PADEX Club'
        LIMIT  1`,
       [id]
     );

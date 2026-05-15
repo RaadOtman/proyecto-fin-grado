@@ -12,10 +12,12 @@ import MyReservations from "./pages/MyReservations";
 import MiClub from "./pages/MiClub";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Onboarding from "./pages/Onboarding";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsuarios from "./pages/admin/AdminUsuarios";
 import AdminReservas from "./pages/admin/AdminReservas";
 import AdminPistas from "./pages/admin/AdminPistas";
+import AdminClub from "./pages/admin/AdminClub";
 
 export default function App() {
   return (
@@ -45,6 +47,10 @@ export default function App() {
           {/* Rutas públicas de autenticación */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route
+            path="/onboarding"
+            element={<ProtectedRoute><Onboarding /></ProtectedRoute>}
+          />
         </Route>
 
         {/* ── Rutas de administración (con sidebar admin) ── */}
@@ -58,6 +64,7 @@ export default function App() {
           <Route path="usuarios" element={<AdminUsuarios />} />
           <Route path="reservas" element={<AdminReservas />} />
           <Route path="pistas" element={<AdminPistas />} />
+          <Route path="club" element={<AdminClub />} />
         </Route>
 
         {/* Cualquier ruta desconocida redirige al inicio */}

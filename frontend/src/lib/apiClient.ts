@@ -13,13 +13,16 @@ async function readJson(res: Response) {
 
 // -------- PUBLIC --------
 
-export async function getAvailability(date: string) {
-  const res = await fetch(`${API_BASE_URL}/availability?date=${date}`);
+export async function getAvailability(date: string, clubId?: number | null) {
+  const params = new URLSearchParams({ date });
+  if (clubId) params.set("club_id", String(clubId));
+  const res = await fetch(`${API_BASE_URL}/availability?${params.toString()}`);
   return readJson(res);
 }
 
-export async function getCourts() {
-  const res = await fetch(`${API_BASE_URL}/courts`);
+export async function getCourts(clubId?: number | null) {
+  const query = clubId ? `?club_id=${clubId}` : "";
+  const res = await fetch(`${API_BASE_URL}/courts${query}`);
   return readJson(res);
 }
 
@@ -36,12 +39,12 @@ export async function loginUser(email: string, password: string) {
   return readJson(res);
 }
 
-export async function registerUser(email: string, password: string) {
+export async function registerUser(email: string, password: string, accountType: "player" | "club" = "player") {
   const res = await fetch(`${API_BASE_URL}/auth/register`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, accountType }),
   });
 
   return readJson(res);
@@ -107,6 +110,65 @@ export async function patchUserClub(userId: number, clubId: number | null) {
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ clubId }),
+  });
+  return readJson(res);
+}
+
+// -------- ONBOARDING --------
+
+export async function getOnboardingStatus() {
+  const res = await fetch(`${API_BASE_URL}/onboarding/status`, {
+    credentials: "include",
+  });
+  return readJson(res);
+}
+
+export async function createOnboardingClub(input: {
+  name: string;
+  city: string;
+  address?: string;
+  description?: string;
+}) {
+  const res = await fetch(`${API_BASE_URL}/onboarding/club`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return readJson(res);
+}
+
+export async function createOnboardingCourts(input: {
+  count: number;
+  type: "Interior" | "Exterior";
+}) {
+  const res = await fetch(`${API_BASE_URL}/onboarding/courts`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return readJson(res);
+}
+
+export async function updateOnboardingSettings(input: {
+  opening_time: string;
+  closing_time: string;
+  slot_minutes: number;
+}) {
+  const res = await fetch(`${API_BASE_URL}/onboarding/settings`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return readJson(res);
+}
+
+export async function completeOnboarding() {
+  const res = await fetch(`${API_BASE_URL}/onboarding/complete`, {
+    method: "POST",
+    credentials: "include",
   });
   return readJson(res);
 }

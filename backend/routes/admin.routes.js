@@ -19,6 +19,247 @@ function toDateStr(d) {
   return String(d);
 }
 
+function toHHMMOrNull(t) {
+  return t ? String(t).slice(0, 5) : null;
+}
+
+function normalizeHHMM(value) {
+  const raw = String(value || "").trim();
+  return /^\d{2}:\d{2}$/.test(raw) ? raw : "";
+}
+
+function isBefore(start, end) {
+  return start && end && start < end;
+}
+
+// ── GET /admin/club ───────────────────────────────────────────
+// Devuelve el club asociado al admin autenticado
+router.get("/club", async (req, res) => {
+  try {
+    const clubId = req.user.club_id;
+
+    const [rows] = await pool.query(
+      `SELECT id, name, city, address, description, logo_url, banner_url, image_url, maps_url, court_count, status, created_at
+       FROM   clubs
+       WHERE  id = ?
+       LIMIT  1`,
+      [clubId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "Club no encontrado" });
+    }
+
+    return res.json({ ok: true, club: rows[0] });
+  } catch (e) {
+    console.error("ADMIN GET CLUB ERROR:", e);
+    return res.status(500).json({ ok: false, error: "Error obteniendo el club" });
+  }
+});
+
+// ── PUT /admin/club ───────────────────────────────────────────
+// Actualiza el club asociado al admin autenticado
+router.put("/club", async (req, res) => {
+  try {
+    const clubId = req.user.club_id;
+    const name = String(req.body?.name || "").trim();
+    const city = String(req.body?.city || "").trim();
+    const address = String(req.body?.address || "").trim() || null;
+    const description = String(req.body?.description || "").trim() || null;
+    const imageUrl = String(req.body?.image_url || "").trim() || null;
+    const logoUrl = String(req.body?.logo_url || "").trim() || null;
+    const bannerUrl = String(req.body?.banner_url || "").trim() || null;
+    const status = ["active", "inactive", "suspended"].includes(req.body?.status)
+      ? req.body.status
+      : "active";
+
+    if (!name || !city) {
+      return res.status(400).json({ ok: false, error: "Nombre y ciudad son obligatorios" });
+    }
+
+    const [result] = await pool.query(
+      `UPDATE clubs
+       SET name = ?, city = ?, address = ?, description = ?, logo_url = ?, banner_url = ?, image_url = ?, status = ?
+       WHERE id = ?`,
+      [name, city, address, description, logoUrl, bannerUrl, imageUrl || bannerUrl || logoUrl, status, clubId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ ok: false, error: "Club no encontrado" });
+    }
+
+    await pool.query(
+      "UPDATE club_settings SET club_name = ? WHERE club_id = ?",
+      [name, clubId]
+    );
+
+    const [rows] = await pool.query(
+      `SELECT id, name, city, address, description, logo_url, banner_url, image_url, maps_url, court_count, status, created_at
+       FROM   clubs
+       WHERE  id = ?
+       LIMIT  1`,
+      [clubId]
+    );
+
+    return res.json({ ok: true, club: rows[0], message: "Club actualizado" });
+  } catch (e) {
+    console.error("ADMIN UPDATE CLUB ERROR:", e);
+    return res.status(500).json({ ok: false, error: "Error actualizando el club" });
+  }
+});
+
+// ── GET /admin/settings ───────────────────────────────────────
+// Devuelve la configuracion operativa del club autenticado
+router.get("/settings", async (req, res) => {
+  try {
+    const clubId = req.user.club_id;
+    const [rows] = await pool.query(
+      `SELECT opening_time,
+              closing_time,
+              schedule_mode,
+              opening_time_morning,
+              closing_time_morning,
+              opening_time_evening,
+              closing_time_evening,
+              slot_minutes,
+              max_days_ahead,
+              cancel_hours_limit
+       FROM   club_settings
+       WHERE  club_id = ?
+       LIMIT  1`,
+      [clubId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "Ajustes del club no encontrados" });
+    }
+
+    const settings = rows[0];
+    return res.json({
+      ok: true,
+      settings: {
+        ...settings,
+        opening_time: toHHMM(settings.opening_time),
+        closing_time: toHHMM(settings.closing_time),
+        opening_time_morning: toHHMMOrNull(settings.opening_time_morning),
+        closing_time_morning: toHHMMOrNull(settings.closing_time_morning),
+        opening_time_evening: toHHMMOrNull(settings.opening_time_evening),
+        closing_time_evening: toHHMMOrNull(settings.closing_time_evening),
+      },
+    });
+  } catch (e) {
+    console.error("ADMIN GET SETTINGS ERROR:", e);
+    return res.status(500).json({ ok: false, error: "Error obteniendo ajustes" });
+  }
+});
+
+// ── PUT /admin/settings ───────────────────────────────────────
+// Actualiza la configuracion operativa del club autenticado
+router.put("/settings", async (req, res) => {
+  try {
+    const clubId = req.user.club_id;
+    const scheduleMode = req.body?.schedule_mode === "split" ? "split" : "continuous";
+    const openingTime = normalizeHHMM(req.body?.opening_time);
+    const closingTime = normalizeHHMM(req.body?.closing_time);
+    const morningOpen = normalizeHHMM(req.body?.opening_time_morning);
+    const morningClose = normalizeHHMM(req.body?.closing_time_morning);
+    const eveningOpen = normalizeHHMM(req.body?.opening_time_evening);
+    const eveningClose = normalizeHHMM(req.body?.closing_time_evening);
+    const slotMinutes = Number(req.body?.slot_minutes) || 90;
+    const maxDaysAhead = Number(req.body?.max_days_ahead) || 14;
+    const cancelHoursLimit = Number(req.body?.cancel_hours_limit) || 12;
+
+    if (![60, 90, 120].includes(slotMinutes)) {
+      return res.status(400).json({ ok: false, error: "Duración de tramo inválida" });
+    }
+    if (maxDaysAhead < 1 || maxDaysAhead > 90) {
+      return res.status(400).json({ ok: false, error: "La antelación debe estar entre 1 y 90 días" });
+    }
+    if (cancelHoursLimit < 0 || cancelHoursLimit > 168) {
+      return res.status(400).json({ ok: false, error: "El límite de cancelación debe estar entre 0 y 168 horas" });
+    }
+
+    if (scheduleMode === "continuous" && !isBefore(openingTime, closingTime)) {
+      return res.status(400).json({ ok: false, error: "La apertura debe ser anterior al cierre" });
+    }
+    if (scheduleMode === "split") {
+      if (!isBefore(morningOpen, morningClose) || !isBefore(eveningOpen, eveningClose)) {
+        return res.status(400).json({ ok: false, error: "Revisa las franjas de mañana y tarde" });
+      }
+      if (morningClose > eveningOpen) {
+        return res.status(400).json({ ok: false, error: "La franja de tarde debe empezar después de cerrar por la mañana" });
+      }
+    }
+
+    const [[club]] = await pool.query("SELECT name FROM clubs WHERE id = ? LIMIT 1", [clubId]);
+    if (!club) {
+      return res.status(404).json({ ok: false, error: "Club no encontrado" });
+    }
+
+    const effectiveOpening = scheduleMode === "split" ? morningOpen : openingTime;
+    const effectiveClosing = scheduleMode === "split" ? eveningClose : closingTime;
+
+    const [existing] = await pool.query("SELECT id FROM club_settings WHERE club_id = ? LIMIT 1", [clubId]);
+    if (existing.length === 0) {
+      await pool.query(
+        `INSERT INTO club_settings
+           (club_id, club_name, opening_time, closing_time, schedule_mode, opening_time_morning, closing_time_morning,
+            opening_time_evening, closing_time_evening, slot_minutes, max_days_ahead, cancel_hours_limit)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          clubId,
+          club.name,
+          `${effectiveOpening}:00`,
+          `${effectiveClosing}:00`,
+          scheduleMode,
+          scheduleMode === "split" ? `${morningOpen}:00` : null,
+          scheduleMode === "split" ? `${morningClose}:00` : null,
+          scheduleMode === "split" ? `${eveningOpen}:00` : null,
+          scheduleMode === "split" ? `${eveningClose}:00` : null,
+          slotMinutes,
+          maxDaysAhead,
+          cancelHoursLimit,
+        ]
+      );
+    } else {
+      await pool.query(
+        `UPDATE club_settings
+         SET club_name = ?,
+             opening_time = ?,
+             closing_time = ?,
+             schedule_mode = ?,
+             opening_time_morning = ?,
+             closing_time_morning = ?,
+             opening_time_evening = ?,
+             closing_time_evening = ?,
+             slot_minutes = ?,
+             max_days_ahead = ?,
+             cancel_hours_limit = ?
+         WHERE club_id = ?`,
+        [
+          club.name,
+          `${effectiveOpening}:00`,
+          `${effectiveClosing}:00`,
+          scheduleMode,
+          scheduleMode === "split" ? `${morningOpen}:00` : null,
+          scheduleMode === "split" ? `${morningClose}:00` : null,
+          scheduleMode === "split" ? `${eveningOpen}:00` : null,
+          scheduleMode === "split" ? `${eveningClose}:00` : null,
+          slotMinutes,
+          maxDaysAhead,
+          cancelHoursLimit,
+          clubId,
+        ]
+      );
+    }
+
+    return res.json({ ok: true, message: "Ajustes actualizados" });
+  } catch (e) {
+    console.error("ADMIN UPDATE SETTINGS ERROR:", e);
+    return res.status(500).json({ ok: false, error: "Error actualizando ajustes" });
+  }
+});
+
 // ── GET /admin/stats ──────────────────────────────────────────
 // Métricas para el dashboard: usuarios activos, reservas de hoy y totales
 router.get("/stats", async (req, res) => {

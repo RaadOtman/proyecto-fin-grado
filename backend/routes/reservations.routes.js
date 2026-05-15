@@ -15,26 +15,47 @@ function toHHMM(timeStr) {
 // Lee los ajustes del club y genera la lista de slots horarios disponibles
 async function getTimeSlots(clubId) {
   const [[cfg]] = await pool.query(
-    "SELECT opening_time, closing_time, slot_minutes FROM club_settings WHERE club_id = ? LIMIT 1",
+    `SELECT opening_time,
+            closing_time,
+            slot_minutes,
+            schedule_mode,
+            opening_time_morning,
+            closing_time_morning,
+            opening_time_evening,
+            closing_time_evening
+     FROM club_settings
+     WHERE club_id = ?
+     LIMIT 1`,
     [clubId]
   );
   if (!cfg) {
     throw new Error("Club settings not found");
   }
   const slots = [];
-  let [h, m] = cfg.opening_time.split(":").map(Number);
-  const [closeH, closeM] = cfg.closing_time.split(":").map(Number);
-  const closeTotal = closeH * 60 + closeM;
 
-  while (true) {
-    const total = h * 60 + m;
-    if (total + cfg.slot_minutes > closeTotal) break;
-    slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-    m += cfg.slot_minutes;
-    h += Math.floor(m / 60);
-    m %= 60;
+  const ranges = cfg.schedule_mode === "split"
+    ? [
+        [cfg.opening_time_morning, cfg.closing_time_morning],
+        [cfg.opening_time_evening, cfg.closing_time_evening],
+      ]
+    : [[cfg.opening_time, cfg.closing_time]];
+
+  for (const [start, end] of ranges) {
+    if (!start || !end) continue;
+    let [h, m] = String(start).split(":").map(Number);
+    const [closeH, closeM] = String(end).split(":").map(Number);
+    const closeTotal = closeH * 60 + closeM;
+
+    while (true) {
+      const total = h * 60 + m;
+      if (total + cfg.slot_minutes > closeTotal) break;
+      slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+      m += cfg.slot_minutes;
+      h += Math.floor(m / 60);
+      m %= 60;
+    }
   }
-  return { slots, slotMinutes: cfg.slot_minutes };
+  return { slots: [...new Set(slots)], slotMinutes: cfg.slot_minutes };
 }
 
 // Suma minutos a una hora "HH:MM" y devuelve el resultado en el mismo formato

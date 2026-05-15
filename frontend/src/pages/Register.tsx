@@ -11,6 +11,7 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
+  const [accountType, setAccountType] = useState<"player" | "club">("player");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
@@ -29,13 +30,20 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await registerUser(email.trim(), password);
+      await registerUser(email.trim(), password, accountType);
 
       const res = await loginUser(email.trim(), password);
-      login(res.email ?? email.trim(), res.role);
+      login(
+        res.email ?? email.trim(),
+        res.role ?? "user",
+        res.id ?? null,
+        res.club_id ?? null
+      );
       setMsg("Cuenta creada correctamente");
 
-      setTimeout(() => navigate("/reservar"), 400);
+      setTimeout(() => {
+        navigate(accountType === "club" ? "/onboarding" : "/mi-club");
+      }, 400);
     } catch (e: any) {
       setError(e?.message || "No se pudo crear la cuenta.");
     } finally {
@@ -57,11 +65,30 @@ export default function Register() {
             Crear cuenta
           </h1>
           <p className="page-subtitle">
-            Regístrate para reservar pistas y gestionar tus reservas.
+            Crea una cuenta para reservar pistas o gestionar tu club.
           </p>
         </div>
 
         <form onSubmit={onSubmit} style={{ display: "grid", gap: 14 }}>
+          <div className="account-type-grid">
+            <button
+              type="button"
+              className={`account-type-card${accountType === "player" ? " account-type-card-active" : ""}`}
+              onClick={() => setAccountType("player")}
+            >
+              <strong>Soy jugador</strong>
+              <span>Reservar pistas en un club</span>
+            </button>
+            <button
+              type="button"
+              className={`account-type-card${accountType === "club" ? " account-type-card-active" : ""}`}
+              onClick={() => setAccountType("club")}
+            >
+              <strong>Soy un club</strong>
+              <span>Crear club y panel admin</span>
+            </button>
+          </div>
+
           <div>
             <label htmlFor="register-email">Correo electrónico</label>
             <input
@@ -109,7 +136,7 @@ export default function Register() {
           {msg && <div className="alert alert-success">{msg}</div>}
 
           <button type="submit" className="button" disabled={!canSubmit}>
-            {loading ? "Creando cuenta..." : "Crear cuenta"}
+            {loading ? "Creando cuenta..." : accountType === "club" ? "Crear cuenta de club" : "Crear cuenta de jugador"}
           </button>
 
           <button

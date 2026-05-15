@@ -37,7 +37,7 @@ function todayISO() {
 
 export default function Reserve() {
   const navigate = useNavigate();
-  const { isAuthenticated, clubName } = useAuth();
+  const { isAuthenticated, clubId, clubName } = useAuth();
 
   // Estado de la fecha seleccionada, los datos de disponibilidad y mensajes
   const [date, setDate] = useState(todayISO());
@@ -81,7 +81,12 @@ export default function Reserve() {
     setLoading(true);
 
     try {
-      const res = await getAvailability(date);
+      if (!clubId) {
+        setData(null);
+        setError("Selecciona un club antes de consultar disponibilidad.");
+        return;
+      }
+      const res = await getAvailability(date, clubId);
       setData(res);
     } catch (e: any) {
       setError(e?.message || "Error cargando disponibilidad");
@@ -94,7 +99,7 @@ export default function Reserve() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [clubId]);
 
   // Crea una reserva cuando el usuario hace clic en un slot libre
   async function reserve(court_id: number, start_time: string) {
@@ -147,7 +152,7 @@ export default function Reserve() {
           <div className="reserve-summary">
             <div className="reserve-summary-item">
               <span>Club</span>
-              <strong>{clubName || "Sin club seleccionado"}</strong>
+              <strong>{clubName || (clubId ? "Club seleccionado" : "Sin club seleccionado")}</strong>
             </div>
             <div className="reserve-summary-item">
               <span>Fecha</span>
@@ -161,11 +166,11 @@ export default function Reserve() {
         </div>
 
         <div className="reserve-flow" aria-label="Flujo de reserva">
-          <div className={`reserve-flow-step ${clubName ? "is-complete" : "is-pending"}`}>
+          <div className={`reserve-flow-step ${clubId ? "is-complete" : "is-pending"}`}>
             <span><FiMapPin /></span>
             <div>
               <strong>Club</strong>
-              <p>{clubName || "Selecciona tu club"}</p>
+              <p>{clubName || (clubId ? "Club seleccionado" : "Selecciona tu club")}</p>
             </div>
           </div>
           <div className="reserve-flow-step is-complete">
@@ -212,7 +217,7 @@ export default function Reserve() {
             </button>
           </div>
 
-          {!clubName && (
+          {!clubId && (
             <button
               type="button"
               className="button-secondary"

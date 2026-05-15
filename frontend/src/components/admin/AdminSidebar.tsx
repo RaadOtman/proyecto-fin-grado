@@ -4,6 +4,7 @@ import {
   FiUsers,
   FiCalendar,
   FiSquare,
+  FiSettings,
   FiArrowLeft,
   FiLogOut,
 } from "react-icons/fi";
@@ -58,6 +59,11 @@ export default function AdminSidebar() {
         <NavLink to="/admin/pistas" className={getClass}>
           <FiSquare size={15} />
           Pistas
+        </NavLink>
+
+        <NavLink to="/admin/club" className={getClass}>
+          <FiSettings size={15} />
+          Mi club
         </NavLink>
       </nav>
 

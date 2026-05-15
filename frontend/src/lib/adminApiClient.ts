@@ -19,6 +19,62 @@ export async function getAdminStats() {
   return readJson(res);
 }
 
+// ─── Club ─────────────────────────────────────────────────────
+
+export async function getAdminClub() {
+  const res = await fetch(`${API_BASE_URL}/admin/club`, {
+    credentials: "include",
+  });
+  return readJson(res);
+}
+
+export async function updateAdminClub(data: {
+  name: string;
+  city: string;
+  address: string;
+  description: string;
+  image_url: string;
+  logo_url: string;
+  banner_url: string;
+  status: "active" | "inactive" | "suspended";
+}) {
+  const res = await fetch(`${API_BASE_URL}/admin/club`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return readJson(res);
+}
+
+export async function getAdminSettings() {
+  const res = await fetch(`${API_BASE_URL}/admin/settings`, {
+    credentials: "include",
+  });
+  return readJson(res);
+}
+
+export async function updateAdminSettings(data: {
+  schedule_mode: "continuous" | "split";
+  opening_time: string;
+  closing_time: string;
+  opening_time_morning: string;
+  closing_time_morning: string;
+  opening_time_evening: string;
+  closing_time_evening: string;
+  slot_minutes: number;
+  max_days_ahead: number;
+  cancel_hours_limit: number;
+}) {
+  const res = await fetch(`${API_BASE_URL}/admin/settings`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return readJson(res);
+}
+
 // ─── Usuarios ────────────────────────────────────────────────
 
 export async function getAdminUsers() {

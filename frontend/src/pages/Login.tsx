@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { loginUser } from "../lib/apiClient";
+import { getOnboardingStatus, loginUser } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
 import { motion } from "framer-motion";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { isAuthenticated, userEmail, login, logout } = useAuth();
+  const { isAuthenticated, userEmail, login, logout, updateClub } = useAuth();
 
   const [email, setEmail] = useState(userEmail ?? "");
   const [password, setPassword] = useState("");
@@ -41,8 +41,22 @@ export default function Login() {
         setPassword("");
       });
 
-      // Si es admin va al panel, si no va a reservar
-      if (roleFromApi === "admin") {
+      let shouldOnboard = roleFromApi === "admin" && !clubIdFromApi;
+      let needsClubSelection = roleFromApi === "user" && !clubIdFromApi;
+      try {
+        const onboardingStatus = await getOnboardingStatus();
+        shouldOnboard = Boolean(onboardingStatus?.onboarding?.needsOnboarding);
+        needsClubSelection = Boolean(onboardingStatus?.onboarding?.needsClubSelection);
+        if (onboardingStatus?.user?.club_id) {
+          updateClub(onboardingStatus.user.club_id, onboardingStatus.user.club_name ?? null);
+        }
+      } catch {}
+
+      if (shouldOnboard) {
+        navigate("/onboarding");
+      } else if (needsClubSelection) {
+        navigate("/mi-club");
+      } else if (roleFromApi === "admin") {
         navigate("/admin/dashboard");
       } else {
         navigate("/reservar");
